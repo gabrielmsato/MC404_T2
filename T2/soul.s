@@ -204,9 +204,19 @@ SVC_HANDLER:
 	movs pc, lr
 
 
-@ Funcoes do uoli ------------------------------------
+@ Funcoes do uoli -----------------------------------------------------
 .set SPEED_msk, 	0b111111
 .set SPEED_DR_msk, 	0b1111111
+.set SONAR_msk,		0b1111
+.set SONARDIS_msk, 	0b111111111111
+
+
+@ Escreve nos pinos do motor escolhido uma velocidade
+@ Parametros:
+@ 	r0 - Id do motor
+@	r1 - Velocidade do motor
+@ Retorno:
+@	r0 - 0 = sucesso / -1 = erro no id do motor / -2 = erro na velocidade
 
 SET_MOTOR_SPEED:
 	stmfd sp!, {r4, lr}
@@ -220,7 +230,7 @@ SET_MOTOR_SPEED:
 	BHI SET_MOTOR_SPEED_END
 
 	@ Entra no modo SYSTEM
-	MSR CPSR_c, #0x1F
+	@MSR CPSR_c, #0x1F
 
 	@ Extrai apenas os 6 bits menos significativos de r1
 	LDR r2, =SPEED_msk
@@ -255,9 +265,17 @@ SET_MOTOR_SPEED:
 
 	SET_MOTOR_SPEED_END:
 		@ Retorna para a SVC_HANDLER
-		msr CPSR_c, #0x13 @ Muda para o modo SUPERVISOR
+		@msr CPSR_c, #0x13 @ Muda para o modo SUPERVISOR
 		ldmfd sp!, {r4, pc}
 
+
+@ Escreve nos pinos dos 2 motores as velocidades
+@ Parametros:
+@ 	r0 - Velocidade do motor 0
+@	r1 - Velocidade do motor 1
+@ Retorno:
+@	r0 - 0 = sucesso / -1 = erro na velocidade do motor 0 /
+@		 -2 = erro na velocidade do motor 1
 
 SET_MOTORS_SPEED:
 	stmfd sp!, {lr}
@@ -271,7 +289,7 @@ SET_MOTORS_SPEED:
 	BHI SET_MOTORS_SPEED_END
 
 	@ Entra no modo SYSTEM
-	MSR CPSR_c, #0x1F
+	@MSR CPSR_c, #0x1F
 
 	@ Extrai apenas os 6 bits menos significativos de r0 e r1
 	LDR r2, =SPEED_msk
@@ -303,8 +321,119 @@ SET_MOTORS_SPEED:
 
 	SET_MOTORS_SPEED_END:
 		@ Retorna para a SVC_HANDLER
-		msr CPSR_c, #0x13 @ Muda para o modo SUPERVISOR
+		@msr CPSR_c, #0x13 @ Muda para o modo SUPERVISOR
 		ldmfd sp!, {pc}
+
+@ Le um sonar especifico
+@ Parametros:
+@ 	r0 - Id do sonar
+@ Retorno:
+@	r0 - valor do sonar / -1 = erro do id do sonar
+
+READ_SONAR:
+	stmfd sp!, {lr}
+
+	@ Verificando se os parametros sao validos
+	CMP r0, #15
+	MOVHI r0, #-1	@ Erro no id do sonar
+	BHI READ_SONAR_END
+
+	@ Extrai apenas os 4 bits menos significativos de r0
+	LDR r1, =SONAR_msk
+	AND r0, r0, r1
+
+	@ Pegando o valor do registrador DR
+	LDR r2, =DR
+	LDR r2, [r2]
+
+	@ Inserindo id do sonar
+	BIC r2, r2, r1, LSL #2	@ Zerando os bits do id do sonar
+	ORR r2, r2, r0, LSL #2
+
+	@ Flag TRIGGER <= 0
+	BIC r2, r2, #0b10	
+
+	@ Seta os pinos do registrador DR
+	LDR r1, =DR
+	STR r2, [r1]
+
+	@ Delay para executar as operacoes
+	BL DELAY_SONAR
+
+	@ Flag TRIGGER <= 1
+	ORR r2, r2, #0b10
+	STR r2, [r1]	@ Seta os pinos do registrador DR
+
+	@ Delay para executar as operacoes
+	BL DELAY_SONAR
+
+	@ Flag TRIGGER <= 0
+	BIC r2, r2, #0b10
+	STR r2, [r1]	@ Seta os pinos do registrador DR
+
+	FLAG_LOOP:
+		@ Pegando o valor do registrador DR
+		LDR r3, [r1]
+
+		@ Verificando de a FLAG = 1
+		AND r2, r3, #1
+		CMP r2, #1
+		BEQ FLAG_LOOP_END
+
+		@ Delay para executar as operacoes
+		BL DELAY_SONAR
+	B FLAG_LOOP
+
+	FLAG_LOOP_END:
+	
+	@ Extraindo o valor retornado do sonar
+	LDR r2, =SONARDIS_msk
+	AND r3, r3, r2, LSL #6
+	MOV r0, r3, LSR #6
+
+	READ_SONAR_END:
+		@ Retorna para a SVC_HANDLER
+		ldmfd sp!, {pc}
+
+@ Delay para executar as operacoes
+DELAY_SONAR:
+	MOV r4, #2048
+	CMP r4, #0
+	BEQ DELAY_SONAR_END
+	SUB R4, R4, #1
+	B DELAY_SONAR
+
+	DELAY_SONAR_END:
+	MOV pc, lr
+
+
+@ Retorna o tempo do sistema
+@ Retorno:
+@	r0 - Valor de SYSTEM_TIME
+
+GET_TIME:
+	stmfd sp!, {lr}
+
+	@ Carrega o valor de SYSTEM_TIME em r0
+	LDR r0, =SYSTEM_TIME
+	LDR r0, [r0]
+
+	ldmfd sp!, {pc}
+
+@ Seta o tempo do sistema
+@ Parametros:
+@ 	r0 - Tempo do sistema a ser setado
+
+SET_TIME:
+	stmfd sp!, {lr}
+
+	@ Seta o tempo passado como parametro em SYSTEM_TIME
+	LDR r1, =SYSTEM_TIME
+	STR r0, [r1]
+
+	ldmfd sp!, {pc}
+
+
 
 .data
 	IRQ_STACK: .skip 1024
