@@ -34,7 +34,7 @@ RESET_HANDLER:
 	@ Valores e enderecos do GPIO
 	.set DR,			0x53F84000
 	.set GDIR, 			0x53F84004
-	.set GDIR_msk,		0b01111100000000000011111111111111
+	.set GDIR_msk,		0b11111111111111000000000000111110
 	.set PSR, 			0x53F84008
 	.set MAX_ALARMS,	0x8
 	.set MAX_CALLBACKS,	0x8	
@@ -176,6 +176,135 @@ IRQ_HANDLER:
     MOVS pc, lr
 
 SVC_HANDLER:
+	stmfd sp!, {r4, lr}
+
+	@ Salva o modo antigo do programa em r4
+	MRS r4, SPSR
+
+	@ Comparacoes para determinar qual o tipo de syscall
+	CMP r7, #16
+	BLEQ READ_SONAR 
+	CMP r7, #17
+	BLEQ REGISTER_PROXIMITY_CALLBACK
+	CMP r7, #18
+	BLEQ SET_MOTOR_SPEED 
+	CMP r7, #19
+	BLEQ SET_MOTORS_SPEED 
+	CMP r7, #20
+	BLEQ GET_TIME 
+	CMP r7, #21
+	BLEQ SET_TIME 
+	CMP r7, #22
+	BLEQ ADD_ALARM 
+
+	@ Retorna ao modo antigo do programa
+	MSR SPSR, R4
+
+	ldmfd sp!, {lr}
+	movs pc, lr
+
+
+@ Funcoes do uoli ------------------------------------
+.set SPEED_msk, 	0b111111
+.set SPEED_DR_msk, 	0b1111111
+
+SET_MOTOR_SPEED:
+	stmfd sp!, {r4, lr}
+
+	@ Verificando se os parametros sao validos
+	CMP r0, #1
+	MOVHI r0, #-1	@ ID invalido
+	BHI SET_MOTOR_SPEED_END
+	CMP r1, #0x3F
+	MOVHI r0, #-2	@ Velocidade invalida
+	BHI SET_MOTOR_SPEED_END
+
+	@ Entra no modo SYSTEM
+	MSR CPSR_c, #0x1F
+
+	@ Extrai apenas os 6 bits menos significativos de r1
+	LDR r2, =SPEED_msk
+	AND r1, r1, r2
+
+	@ Pegando o valor do registrador DR
+	LDR r2, =DR
+	LDR r2, [r2]
+
+	@ Verifica qual motor esta sendo utilizado
+	CMP r0, #0
+	MOVEQ r3, #25
+	MOVNE r3, #18
+
+	@ Mascara dos bits relativos ao motor
+	LDR r4, =SPEED_DR_msk
+
+	@ Zerando os bits da velocidade do motor
+	BIC r2, r2, r4, LSL r3
+
+	@ Inserindo nova velocidade
+	ADD r3, r3, #1
+	ORR r2, r2, r1, LSL r3
+	MOV r4, #1
+	SUB r3, r3, #1
+	BIC r2, r2, r4, LSL r3	@ Flag MOTOR_WRITE <= 0
+
+	@ Seta os pinos do registrador DR para concluir a operacao
+	LDR r3, =DR
+	STR r2, [r3]
+	MOV r0, #0	@ Retorno correto
+
+	SET_MOTOR_SPEED_END:
+		@ Retorna para a SVC_HANDLER
+		msr CPSR_c, #0x13 @ Muda para o modo SUPERVISOR
+		ldmfd sp!, {r4, pc}
+
+
+SET_MOTORS_SPEED:
+	stmfd sp!, {lr}
+
+	@ Verificando se os parametros sao validos
+	CMP r0, #0x3F
+	MOVHI r0, #-1	@ Velocidade do motor 0 invalida
+	BHI SET_MOTORS_SPEED_END
+	CMP r1, #0x3F
+	MOVHI r0, #-2	@ Velocidade do motor 1 invalida
+	BHI SET_MOTORS_SPEED_END
+
+	@ Entra no modo SYSTEM
+	MSR CPSR_c, #0x1F
+
+	@ Extrai apenas os 6 bits menos significativos de r0 e r1
+	LDR r2, =SPEED_msk
+	AND r0, r0, r2
+	AND r1, r1, r2
+
+	@ Pegando o valor do registrador DR
+	LDR r2, =DR
+	LDR r2, [r2]
+
+	@ Mascara dos bits relativos ao motor
+	LDR r3, =SPEED_DR_msk
+
+	@ Zerando os bits das velocidades dos motores
+	BIC r2, r2, r3, LSL #18
+	BIC r2, r2, r3, LSL #25
+
+	@ Inserindo novas velocidades
+	ORR r2, r2, r1, LSL #19
+	ORR r2, r2, r0, LSL #26
+	MOV r1, #1
+	BIC r2, r2, r1, LSL #18	@ Flag MOTOR0_WRITE <= 0
+	BIC r2, r2, r1, LSL #25	@ Flag MOTOR1_WRITE <= 0
+
+	@ Seta os pinos do registrador DR para concluir a operacao
+	LDR r1, =DR
+	STR r2, [r1]
+	MOV r0, #0	@ Retorno correto
+
+	SET_MOTORS_SPEED_END:
+		@ Retorna para a SVC_HANDLER
+		msr CPSR_c, #0x13 @ Muda para o modo SUPERVISOR
+		ldmfd sp!, {pc}
 
 .data
 	IRQ_STACK: .skip 1024
