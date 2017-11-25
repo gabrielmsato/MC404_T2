@@ -1,10 +1,5 @@
 .org 0x0
 .section .iv,"a"
-.data
-
-	SYSTEM_TIME: .word 0
-	CALLBACK_QTD: .word 0
-	ALARM_QTD: .word 0
 
 _start:
 
@@ -99,7 +94,8 @@ RESET_HANDLER:
     @ Configurando o GPIO ----------------------------------
     @ Configura a direcao dos pinos entrada/saida
     LDR r2, =GDIR
-    MOV r1, #GDIR_msk
+    LDR r1, =GDIR_msk
+    LDR r1, [r1]
     STR r1, [r2]
 
     @ Zera as entradas e saidas dos pinos
@@ -160,6 +156,14 @@ RESET_HANDLER:
 
 @-------------------------------------------------------------------------------
 IRQ_HANDLER:
+	stmfd sp!, {r0-r7, lr}
+
+	@ Salvando modo anterior do sistema
+	MRS r0, SPSR
+	stmfd sp!, {r0}
+
+	msr CPSR_c, #0xD2
+
 	@ Informa que a interrupcao foi capturada
     LDR r2, =GPT_SR
     MOV r1, #0x1
@@ -169,11 +173,173 @@ IRQ_HANDLER:
     ldr r2, =SYSTEM_TIME
     LDR r0, [r2]
     ADD r0, r0, #1
-    str r0, [r2]
+    STR r0, [r2]
+
+    @ Checando alarmes ----------------------------------
+	MOV r0, #0 @ Indice do for
+
+	@ Pegando quantidade de alarmes
+	LDR r1, =ALARM_QTD
+	LDR r1, [r1]
+
+	@ Carrega o vetor de alarmes
+	LDR r2, =VET_ALARMES
+
+	MOV r3, #0	@ Indice do contador de alarmes
+
+    @ Vetor de alarmes = endereco_func | tempo (espaco na memoria por posicao = 4 * 2)
+    ALARM_CHECK:    	
+    	@ Se indice = qtd, termina
+    	CMP r1, r0
+    	BEQ ALARM_CHECK_END
+
+    	@ Extrai o tempo do alarme
+    	ADD r3, r3, #4
+    	LDR r4, [r2, r3]
+
+    	@ Verifica se tempo de sistema = alarme
+    	LDR r5, =SYSTEM_TIME
+    	LDR r5, [r5]
+    	CMP r4, r5
+    	BLNE PROX_ALARME
+
+    	@ Indice do ultimo alarme
+    	MOV r4, #8
+    	MUL r4, r1, r4
+    	SUB r4, r4, #8
+
+    	@ Guardando funcao a ser chamada
+    	SUB r3, r3, #4
+    	LDR r6, [r2, r3]
+
+    	@ Substituindo ultimo alarme pelo executado
+    	LDR r7, [r2, r4]
+    	STR r7, [r2, r3]
+    	ADD r4, r4, #4
+    	ADD r3, r3, #4
+    	LDR r7, [r2, r4]
+    	STR r7, [r2, r3]
+
+    	@ Decrementando qtd alarmes
+    	LDR r4, =ALARM_QTD
+    	LDR r7, [r4]
+    	SUB r7, r7, #1
+    	STR r7, [r4]
+
+    	@ Chama a funcao do alarme
+    	stmfd sp!, {lr}
+	    blx r6
+	    ldmfd sp!, {lr}
+
+
+    	PROX_ALARME:
+    	@ Incrementando o for e incrementando o indice do vetor
+    	ADD r0, r0, #1
+    	ADD r3, r3, #4
+
+    	B ALARM_CHECK
+    ALARM_CHECK_END:
+
+    @ Checando callbacks ----------------------------
+    @ Entrando em modo usuario
+    msr CPSR_c, #0x10
+    MOV r0, #0 @ Indice do for
+
+	@ Pegando quantidade de alarmes
+	LDR r1, =CALLBACK_QTD
+	LDR r1, [r1]
+
+	@ Carrega o vetor de alarmes
+	LDR r2, =VET_CALLBACKS
+
+	MOV r3, #0	@ Indice do contador de alarmes
+
+	@ Vetor de callbacks = id | distancia | funcao
+	CALLBACK_CHECK:    	
+    	@ Se indice = qtd, termina
+    	CMP r1, r0
+    	BEQ CALLBACK_CHECK_END
+
+    	@ Extrai id do sonar
+    	MOV r4, r0
+    	LDR r0, [r2, r3]
+
+    	@ Empilha registradores caller save
+    	stmfd sp!, {r0-r3}
+
+    	@ Chama interrupcao svc para ler sonar
+    	MOV r7, #16
+    	svc 0x0
+
+    	@ Desempilha registradores caller save
+    	ldmfd sp!, {r0-r3}
+
+    	@ Retorna valor antigo de r0
+    	MOV r5, r0
+    	MOV r0, r4
+
+    	@ Extrai o limiar de distancia e compara com valor lido
+    	ADD r3, r3, #4
+    	LDR r4, [r2, r3]
+    	CMP r4, r5
+    	BLHI PROX_CALLBACK
+
+    	@ Indice da ultima callback
+    	MOV r4, #12
+    	MUL r4, r1, r4
+    	SUB r4, r4, #12
+
+    	@ Guardando funcao a ser chamada
+    	ADD r3, r3, #4
+    	LDR r6, [r2, r3]
+
+    	@ Substituindo ultima callback pela executada
+    	LDR r7, [r2, r4]
+    	STR r7, [r2, r3]
+    	ADD r4, r4, #4
+    	ADD r3, r3, #4
+    	LDR r7, [r2, r4]
+    	STR r7, [r2, r3]
+    	ADD r4, r4, #4
+    	ADD r3, r3, #4
+    	LDR r7, [r2, r4]
+    	STR r7, [r2, r3]
+
+    	@ Decrementando qtd alarmes
+    	LDR r4, =CALLBACK_QTD
+    	LDR r7, [r4]
+    	SUB r7, r7, #1
+    	STR r7, [r4]
+
+    	@ Chama a funcao da callback
+    	stmfd sp!, {lr}
+	    blx r6
+	    ldmfd sp!, {lr}
+
+    	PROX_CALLBACK:
+    	@ Incrementando o for e incrementando o indice do vetor
+    	ADD r0, r0, #1
+    	ADD r3, r3, #4
+
+    	B CALLBACK_CHECK
+    CALLBACK_CHECK_END:
+
+    @ Chama syscall para mudar para modo SUPERVISOR
+    MOV r7, #50
+    svc 0x0
+
+    @ Muda para o IRQ mode para recuperar modo antigo
+    msr CPSR_c, #0xD2
+
+    @ Seta modo antigo do sistema
+    ldmfd sp!, {r0}
+    msr SPSR, r0 
 
     @Retorno tem que subtrair 4 de pc
+	ldmfd sp!, {r0-r7, lr}
     SUB lr, lr, #4
-    MOVS pc, lr
+	movs pc, lr
+
 
 SVC_HANDLER:
 	stmfd sp!, {r4, lr}
@@ -197,6 +363,18 @@ SVC_HANDLER:
 	CMP r7, #22
 	BLEQ ADD_ALARM 
 
+	@ Syscall utilizada para mudar para SUPERVISOR
+	CMP r7, #50
+	BNE SVC_HANDLER_END
+
+	@ Desempilhando modo antigo, pois queremos o modo SUPERVISOR
+	ADD sp, sp, #4
+
+	@ Retorna para a funcao que chamou em modo SUPERVISOR
+	ldmfd sp!, {lr}
+    mov pc, lr
+	
+	SVC_HANDLER_END:
 	@ Retorna ao modo antigo do programa
 	MSR SPSR, R4
 
@@ -228,9 +406,6 @@ SET_MOTOR_SPEED:
 	CMP r1, #0x3F
 	MOVHI r0, #-2	@ Velocidade invalida
 	BHI SET_MOTOR_SPEED_END
-
-	@ Entra no modo SYSTEM
-	@MSR CPSR_c, #0x1F
 
 	@ Extrai apenas os 6 bits menos significativos de r1
 	LDR r2, =SPEED_msk
@@ -265,7 +440,6 @@ SET_MOTOR_SPEED:
 
 	SET_MOTOR_SPEED_END:
 		@ Retorna para a SVC_HANDLER
-		@msr CPSR_c, #0x13 @ Muda para o modo SUPERVISOR
 		ldmfd sp!, {r4, pc}
 
 
@@ -287,9 +461,6 @@ SET_MOTORS_SPEED:
 	CMP r1, #0x3F
 	MOVHI r0, #-2	@ Velocidade do motor 1 invalida
 	BHI SET_MOTORS_SPEED_END
-
-	@ Entra no modo SYSTEM
-	@MSR CPSR_c, #0x1F
 
 	@ Extrai apenas os 6 bits menos significativos de r0 e r1
 	LDR r2, =SPEED_msk
@@ -321,7 +492,6 @@ SET_MOTORS_SPEED:
 
 	SET_MOTORS_SPEED_END:
 		@ Retorna para a SVC_HANDLER
-		@msr CPSR_c, #0x13 @ Muda para o modo SUPERVISOR
 		ldmfd sp!, {pc}
 
 @ Le um sonar especifico
@@ -407,6 +577,60 @@ DELAY_SONAR:
 	MOV pc, lr
 
 
+@ Adiciona no vetor de callback um callback
+@ Parametros:
+@ 	r0 - Id do sonar
+@	r1 - Limiar de distancia
+@	r2 - Ponteiro para a funcao
+@ Retorno:
+@	r0 - 0 = sucesso / -1 = numero de callbacks max atingido
+@		 -2 = id do sonar invalido
+@ Vetor de callbacks = id | distancia | funcao
+
+REGISTER_PROXIMITY_CALLBACK:
+	stmfd sp!, {r4, lr}
+
+	@ Carrega qtd callbacks e compara com o max
+	LDR r3, =CALLBACK_QTD
+	LDR r3, [r3]
+	CMP r3, #MAX_CALLBACKS
+	MOVGE r0, #-1	@ Erro na qtd de callbacks
+	BGE REGISTER_PROXIMITY_CALLBACK_END
+
+	@ Verifica se o id do sonar é valido
+	CMP r0, #15
+	MOVHI r0, #-2
+	BLS REGISTER_PROXIMITY_CALLBACK_END
+
+	@ Seta o indice da proxima casa do vetor
+	@ Vetor de callbacks = id | distancia | funcao (espaco na memoria por posicao = 4 * 3)
+	MOV r4, #12
+	MUL r4, r3 ,r4
+
+	@ Carrega o vetor de callbacks e salva id do sonar
+	LDR r3, =VET_CALLBACKS
+	STR r0, [r3, r4]
+
+	@ Adiciona a distancia
+	ADD r4, r4, #4
+	STR r1, [r3, r4]
+
+	@ Adiciona o ponteiro da funcao
+	ADD r4, r4, #4
+	STR r2, [r3, r4]
+
+	@ Incremente CALLBACK_QTD
+	LDR r2, =CALLBACK_QTD
+	LDR r3, [r2]
+	ADD r3, r3, #1
+	STR r3, [r2]
+
+	@ Retorna sucesso na operacao
+	MOV r0, #0
+
+	REGISTER_PROXIMITY_CALLBACK_END:
+		ldmfd sp!, {r4, pc}
+
 @ Retorna o tempo do sistema
 @ Retorno:
 @	r0 - Valor de SYSTEM_TIME
@@ -434,8 +658,64 @@ SET_TIME:
 	ldmfd sp!, {pc}
 
 
+@ Adiciona um alarme no sistema
+@ Parametros:
+@ 	r0 - Ponteiro para funcao a ser chamada
+@	r1 - Tempo do alarme
+@ Retorno:
+@	r0 - 0 = sucesso / -1 = maximo de alarmes atingidos
+@		 -2 = tempo menor que tempo atual do sistema
+
+ADD_ALARM:
+	stmfd sp!, {lr}
+
+	@ Carrega qtd alarme e compara com o max
+	LDR r2, =ALARM_QTD
+	LDR r2, [r2]
+	CMP r2, #MAX_ALARMS
+	MOVGE r0, #-1	@ Erro na qtd de alarmes
+	BGE ADD_ALARM_END
+
+	@ Verifica se o tempo do alarme eh maior que o tempo do sistema
+	LDR r3, =SYSTEM_TIME
+	LDR r3, [r3]
+	CMP r3, r1
+	MOVLS r0, #-2
+	BLS ADD_ALARM_END
+
+	@ Seta o indice da proxima casa do vetor
+	@ Vetor de alarmes = endereco_func | tempo (espaco na memoria por posicao = 4 * 2)
+	MOV r3, #8
+	MUL r3, r2 ,r3
+
+	@ Carrega o vetor de alarmes e salva endereco_func
+	LDR r2, =VET_ALARMES
+	STR r0, [r2, r3]
+
+	@ Adiciona o tempo do alarme
+	ADD r3, r3, #4
+	STR r1, [r2, r3]
+
+	@ Incremento de ALARM_QTD
+	LDR r2, =ALARM_QTD
+	LDR r3, [r2]
+	ADD r3, r3, #1
+	STR r3, [r2]
+
+	@ Retorna sucesso na operacao
+	MOV r0, #0
+
+	ADD_ALARM_END:
+		ldmfd sp!, {pc}
+
 
 .data
-	IRQ_STACK: .skip 1024
-	SVC_STACK: .skip 1024
-	SYS_STACK: .skip 1024
+	SYSTEM_TIME: .word 0
+	CALLBACK_QTD: .word 0
+	ALARM_QTD: .word 0
+
+	IRQ_STACK: 		.skip 1024
+	SVC_STACK: 		.skip 1024
+	SYS_STACK: 		.skip 1024
+	VET_ALARMES:	.skip 64	
+	VET_CALLBACKS:	.skip 96	
