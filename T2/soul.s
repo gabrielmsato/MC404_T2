@@ -24,7 +24,7 @@ RESET_HANDLER:
 	.set GPT_OCR1, 		0x53FA0010
 	.set GPT_IR, 		0x53FA000C
 	.set GPT_SR, 		0x53FA0008
-	.set TIME_SZ,		50
+	.set TIME_SZ,		200
 
 	@ Valores e enderecos do GPIO
 	.set DR,			0x53F84000
@@ -42,12 +42,10 @@ RESET_HANDLER:
 
     @ Zera o contador de callbacks
     ldr r2, =CALLBACK_QTD
-    mov r0, #0
     str r0, [r2]
 
     @ Zera o contador de alarmes
     ldr r2, =ALARM_QTD
-    mov r0, #0
     str r0, [r2]
 
     @Faz o registrador que aponta para a tabela de interrupções apontar para a tabela interrupt_vector
@@ -95,12 +93,11 @@ RESET_HANDLER:
     @ Configura a direcao dos pinos entrada/saida
     LDR r2, =GDIR
     LDR r1, =GDIR_msk
-    LDR r1, [r1]
     STR r1, [r2]
 
     @ Zera as entradas e saidas dos pinos
     LDR r2, =DR
-    MOV r1, #0
+    LDR r1, #0x0
     STR r1, [r2]
 
 
@@ -175,6 +172,9 @@ IRQ_HANDLER:
     ADD r0, r0, #1
     STR r0, [r2]
 
+    @ Entrando em modo usuario
+    msr CPSR_c, #0x10
+    
     @ Checando alarmes ----------------------------------
 	MOV r0, #0 @ Indice do for
 
@@ -241,8 +241,7 @@ IRQ_HANDLER:
     ALARM_CHECK_END:
 
     @ Checando callbacks ----------------------------
-    @ Entrando em modo usuario
-    msr CPSR_c, #0x10
+    
     MOV r0, #0 @ Indice do for
 
 	@ Pegando quantidade de alarmes
@@ -376,7 +375,7 @@ SVC_HANDLER:
 	
 	SVC_HANDLER_END:
 	@ Retorna ao modo antigo do programa
-	MSR SPSR, R4
+	MSR SPSR, r24
 
 	ldmfd sp!, {lr}
 	movs pc, lr
