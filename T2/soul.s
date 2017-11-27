@@ -17,7 +17,6 @@ interrupt_vector:
 
 RESET_HANDLER:
 	
-	.set MAIN,			0x77812000
 	@ Valores e enderecos do GPT
 	.set GPT_CR, 		0x53FA0000
 	.set GPT_PR, 		0x53FA0004
@@ -29,10 +28,15 @@ RESET_HANDLER:
 	@ Valores e enderecos do GPIO
 	.set DR,			0x53F84000
 	.set GDIR, 			0x53F84004
-	.set GDIR_msk,		0b11111111111111000000000000111110
+	.set GDIR_msk,		0xFFFC003E
 	.set PSR, 			0x53F84008
 	.set MAX_ALARMS,	0x8
 	.set MAX_CALLBACKS,	0x8	
+
+	.set MAIN,			0x77802000
+	.set IRQ_STACK, 	0x77816000
+	.set SVC_STACK,		0x77818000
+	.set SYS_STACK,		0x77820000
 
 
     @ Zera o contador do sistema
@@ -52,20 +56,18 @@ RESET_HANDLER:
     ldr r0, =interrupt_vector
     mcr p15, 0, r0, c12, c0, 0
 
-
     @ Incializando pilhas em seus modos ------------------------------
     @ Ajustando a pilha do modo IRQ.
-    msr  CPSR_c, #0x12
+    msr  CPSR_c, #0xD2
     LDR sp, =IRQ_STACK
-
-    @ Ajustando a pilha do modo SVC
-    msr  CPSR_c, #0x13
-    LDR sp, =SVC_STACK
 
     @ Ajustando a pilha do modo SYSTEM 
     msr CPSR_c, #0x1F
     LDR sp, =SYS_STACK
 
+    @ Ajustando a pilha do modo SVC
+    msr  CPSR_c, #0x13
+    LDR sp, =SVC_STACK
 
     @ Configurando o GPT ----------------------------------
     @ Habilita clock_src e o configura como periférico escrevendo em GPT_CR 0x41
@@ -97,7 +99,7 @@ RESET_HANDLER:
 
     @ Zera as entradas e saidas dos pinos
     LDR r2, =DR
-    LDR r1, #0x0
+    MOV r1, #0x0
     STR r1, [r2]
 
 
@@ -264,14 +266,14 @@ IRQ_HANDLER:
     	LDR r0, [r2, r3]
 
     	@ Empilha registradores caller save
-    	stmfd sp!, {r0-r3}
+    	stmfd sp!, {r1-r3}
 
     	@ Chama interrupcao svc para ler sonar
     	MOV r7, #16
     	svc 0x0
 
     	@ Desempilha registradores caller save
-    	ldmfd sp!, {r0-r3}
+    	ldmfd sp!, {r1-r3}
 
     	@ Retorna valor antigo de r0
     	MOV r5, r0
@@ -293,6 +295,7 @@ IRQ_HANDLER:
     	LDR r6, [r2, r3]
 
     	@ Substituindo ultima callback pela executada
+    	SUB r3, r3, #8
     	LDR r7, [r2, r4]
     	STR r7, [r2, r3]
     	ADD r4, r4, #4
@@ -304,7 +307,7 @@ IRQ_HANDLER:
     	LDR r7, [r2, r4]
     	STR r7, [r2, r3]
 
-    	@ Decrementando qtd alarmes
+    	@ Decrementando qtd callbacks
     	LDR r4, =CALLBACK_QTD
     	LDR r7, [r4]
     	SUB r7, r7, #1
@@ -334,7 +337,7 @@ IRQ_HANDLER:
     ldmfd sp!, {r0}
     msr SPSR, r0 
 
-    @Retorno tem que subtrair 4 de pc
+    @Retorno tem que subtrair 4 de lr
 	ldmfd sp!, {r0-r7, lr}
     SUB lr, lr, #4
 	movs pc, lr
@@ -345,6 +348,7 @@ SVC_HANDLER:
 
 	@ Salva o modo antigo do programa em r4
 	MRS r4, SPSR
+	stmfd sp!, {r4}
 
 	@ Comparacoes para determinar qual o tipo de syscall
 	CMP r7, #16
@@ -375,9 +379,10 @@ SVC_HANDLER:
 	
 	SVC_HANDLER_END:
 	@ Retorna ao modo antigo do programa
-	MSR SPSR, r24
+	ldmfd sp!, {r4}
+	MSR SPSR, r4
 
-	ldmfd sp!, {lr}
+	ldmfd sp!, {r4, lr}
 	movs pc, lr
 
 
@@ -527,14 +532,29 @@ READ_SONAR:
 	STR r2, [r1]
 
 	@ Delay para executar as operacoes
-	BL DELAY_SONAR
+	MOV r4, #4096
+
+	DELAY_SONAR_LOOP1:
+		CMP r4, #0
+		BEQ DELAY_SONAR_END1
+		SUB r4, r4, #1
+	B DELAY_SONAR_LOOP1
+	DELAY_SONAR_END1:
+
 
 	@ Flag TRIGGER <= 1
 	ORR r2, r2, #0b10
 	STR r2, [r1]	@ Seta os pinos do registrador DR
 
 	@ Delay para executar as operacoes
-	BL DELAY_SONAR
+	MOV r4, #4096
+
+	DELAY_SONAR_LOOP2:
+		CMP r4, #0
+		BEQ DELAY_SONAR_END2
+		SUB r4, r4, #1
+	B DELAY_SONAR_LOOP2
+	DELAY_SONAR_END2:
 
 	@ Flag TRIGGER <= 0
 	BIC r2, r2, #0b10
@@ -545,16 +565,27 @@ READ_SONAR:
 		LDR r3, [r1]
 
 		@ Verificando de a FLAG = 1
-		AND r2, r3, #1
-		CMP r2, #1
+		AND r3, r3, #1
+		CMP r3, #1
 		BEQ FLAG_LOOP_END
 
 		@ Delay para executar as operacoes
-		BL DELAY_SONAR
+		MOV r4, #4096
+
+		DELAY_SONAR_LOOP3:
+			CMP r4, #0
+			BEQ DELAY_SONAR_END3
+			SUB r4, r4, #1
+		B DELAY_SONAR_LOOP3
+		DELAY_SONAR_END3:
+
 	B FLAG_LOOP
 
 	FLAG_LOOP_END:
 	
+	@ Pegando o valor do registrador DR
+	LDR r3, [r1]
+
 	@ Extraindo o valor retornado do sonar
 	LDR r2, =SONARDIS_msk
 	AND r3, r3, r2, LSL #6
@@ -563,17 +594,6 @@ READ_SONAR:
 	READ_SONAR_END:
 		@ Retorna para a SVC_HANDLER
 		ldmfd sp!, {pc}
-
-@ Delay para executar as operacoes
-DELAY_SONAR:
-	MOV r4, #2048
-	CMP r4, #0
-	BEQ DELAY_SONAR_END
-	SUB R4, R4, #1
-	B DELAY_SONAR
-
-	DELAY_SONAR_END:
-	MOV pc, lr
 
 
 @ Adiciona no vetor de callback um callback
@@ -713,8 +733,6 @@ ADD_ALARM:
 	CALLBACK_QTD: .word 0
 	ALARM_QTD: .word 0
 
-	IRQ_STACK: 		.skip 1024
-	SVC_STACK: 		.skip 1024
-	SYS_STACK: 		.skip 1024
+	
 	VET_ALARMES:	.skip 64	
 	VET_CALLBACKS:	.skip 96	
