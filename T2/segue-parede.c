@@ -12,8 +12,8 @@ void _start(void)
 {
   unsigned int distancias[16];
 
-  busca_parede(&distancias);
-  segue_parede(&distancias);
+  busca_parede(distancias);
+  segue_parede(distancias);
 }
 
 void busca_parede(unsigned int* distancias) {
@@ -36,7 +36,7 @@ void busca_parede(unsigned int* distancias) {
 
   motor0.speed = 0;
   set_motors_speed(&motor0, &motor1);
-  for(i = 0; i < 9000);
+  for(i = 0; i < 9000;i++);
 
   motor0.speed = 25;
   motor1.speed = 25;
@@ -50,11 +50,12 @@ void segue_parede(unsigned int* distancias) {
 
   register_proximity_callback(3, 600, virar1);
   register_proximity_callback(4, 600, virar2);
-  while(true);
+  while(1);
 }
 
 void corrigir1() {
   motor_cfg_t motor0;
+  int i;
   motor0.id = 0;
   motor0.speed = 25;
 
@@ -64,7 +65,7 @@ void corrigir1() {
 
   set_motors_speed(&motor0, &motor1);
 
-  for(i = 0; i < 5000);
+  for(i = 0; i < 5000;i++);
 
   motor0.speed = 25;
   motor0.speed = 25;
@@ -74,6 +75,7 @@ void corrigir1() {
 
 void corrigir2() {
   motor_cfg_t motor0;
+  int i;
   motor0.id = 0;
   motor0.speed = 25;
 
@@ -83,7 +85,7 @@ void corrigir2() {
 
   set_motors_speed(&motor0, &motor1);
 
-  for(i = 0; i < 5000);
+  for(i = 0; i < 5000;i++);
 
   motor0.speed = 25;
   motor0.speed = 25;
@@ -93,6 +95,7 @@ void corrigir2() {
 
 void virar1() {
   motor_cfg_t motor0;
+  int i;
   motor0.id = 0;
   motor0.speed = 25;
 
@@ -101,7 +104,7 @@ void virar1() {
   motor1.speed =0;
   set_motors_speed(&motor0, &motor1);
 
-  for(i = 0; i < 9000);
+  for(i = 0; i < 9000;i++);
 
   motor0.speed = 25;
   motor0.speed = 25;
@@ -111,6 +114,7 @@ void virar1() {
 
 void virar2() {
   motor_cfg_t motor0;
+  int i;
   motor0.id = 0;
   motor0.speed = 25;
 
@@ -119,7 +123,7 @@ void virar2() {
   motor1.speed =0;
   set_motors_speed(&motor0, &motor1);
 
-  for(i = 0; i < 9000);
+  for(i = 0; i < 9000;i++);
 
   motor0.speed = 25;
   motor0.speed = 25;

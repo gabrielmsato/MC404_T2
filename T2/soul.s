@@ -16,7 +16,7 @@ interrupt_vector:
 .text
 
 RESET_HANDLER:
-	
+
 	@ Valores e enderecos do GPT
 	.set GPT_CR, 		0x53FA0000
 	.set GPT_PR, 		0x53FA0004
@@ -31,7 +31,7 @@ RESET_HANDLER:
 	.set GDIR_msk,		0xFFFC003E
 	.set PSR, 			0x53F84008
 	.set MAX_ALARMS,	0x8
-	.set MAX_CALLBACKS,	0x8	
+	.set MAX_CALLBACKS,	0x8
 
 	.set MAIN,			0x77802000
 	.set IRQ_STACK, 	0x77816000
@@ -61,7 +61,7 @@ RESET_HANDLER:
     msr  CPSR_c, #0xD2
     LDR sp, =IRQ_STACK
 
-    @ Ajustando a pilha do modo SYSTEM 
+    @ Ajustando a pilha do modo SYSTEM
     msr CPSR_c, #0x1F
     LDR sp, =SYS_STACK
 
@@ -90,7 +90,7 @@ RESET_HANDLER:
     MOV r1, #1
     STR r1, [r2]
 
-    
+
     @ Configurando o GPIO ----------------------------------
     @ Configura a direcao dos pinos entrada/saida
     LDR r2, =GDIR
@@ -107,7 +107,7 @@ RESET_HANDLER:
 	    @ Constantes para os enderecos do TZIC
 	    .set TZIC_BASE,             0x0FFFC000
 	    .set TZIC_INTCTRL,          0x0
-	    .set TZIC_INTSEC1,          0x84 
+	    .set TZIC_INTSEC1,          0x84
 	    .set TZIC_ENSET1,           0x104
 	    .set TZIC_PRIOMASK,         0xC
 	    .set TZIC_PRIORITY9,        0x424
@@ -176,7 +176,7 @@ IRQ_HANDLER:
 
     @ Entrando em modo usuario
     msr CPSR_c, #0x10
-    
+
     @ Checando alarmes ----------------------------------
 	MOV r0, #0 @ Indice do for
 
@@ -190,7 +190,7 @@ IRQ_HANDLER:
 	MOV r3, #0	@ Indice do contador de alarmes
 
     @ Vetor de alarmes = endereco_func | tempo (espaco na memoria por posicao = 4 * 2)
-    ALARM_CHECK:    	
+    ALARM_CHECK:
     	@ Se indice = qtd, termina
     	CMP r1, r0
     	BEQ ALARM_CHECK_END
@@ -243,7 +243,7 @@ IRQ_HANDLER:
     ALARM_CHECK_END:
 
     @ Checando callbacks ----------------------------
-    
+
     MOV r0, #0 @ Indice do for
 
 	@ Pegando quantidade de alarmes
@@ -256,7 +256,7 @@ IRQ_HANDLER:
 	MOV r3, #0	@ Indice do contador de alarmes
 
 	@ Vetor de callbacks = id | distancia | funcao
-	CALLBACK_CHECK:    	
+	CALLBACK_CHECK:
     	@ Se indice = qtd, termina
     	CMP r1, r0
     	BEQ CALLBACK_CHECK_END
@@ -335,7 +335,7 @@ IRQ_HANDLER:
 
     @ Seta modo antigo do sistema
     ldmfd sp!, {r0}
-    msr SPSR, r0 
+    msr SPSR, r0
 
     @Retorno tem que subtrair 4 de lr
 	ldmfd sp!, {r0-r7, lr}
@@ -351,20 +351,20 @@ SVC_HANDLER:
 	stmfd sp!, {r4}
 
 	@ Comparacoes para determinar qual o tipo de syscall
-	CMP r7, #16
-	BLEQ READ_SONAR 
-	CMP r7, #17
-	BLEQ REGISTER_PROXIMITY_CALLBACK
-	CMP r7, #18
-	BLEQ SET_MOTOR_SPEED 
-	CMP r7, #19
-	BLEQ SET_MOTORS_SPEED 
-	CMP r7, #20
-	BLEQ GET_TIME 
 	CMP r7, #21
-	BLEQ SET_TIME 
-	CMP r7, #22
-	BLEQ ADD_ALARM 
+	BLEQ READ_SONAR
+	@ CMP r7, #17
+	@ BLEQ REGISTER_PROXIMITY_CALLBACK
+	CMP r7, #20
+	BLEQ SET_MOTOR_SPEED
+	@ CMP r7, #19
+	@ BLEQ SET_MOTORS_SPEED
+	CMP r7, #17
+	BLEQ GET_TIME
+	CMP r7, #18
+	BLEQ SET_TIME
+	@ CMP r7, #22
+	@ BLEQ ADD_ALARM
 
 	@ Syscall utilizada para mudar para SUPERVISOR
 	CMP r7, #50
@@ -376,7 +376,7 @@ SVC_HANDLER:
 	@ Retorna para a funcao que chamou em modo SUPERVISOR
 	ldmfd sp!, {lr}
     mov pc, lr
-	
+
 	SVC_HANDLER_END:
 	@ Retorna ao modo antigo do programa
 	ldmfd sp!, {r4}
@@ -455,48 +455,48 @@ SET_MOTOR_SPEED:
 @	r0 - 0 = sucesso / -1 = erro na velocidade do motor 0 /
 @		 -2 = erro na velocidade do motor 1
 
-SET_MOTORS_SPEED:
-	stmfd sp!, {lr}
-
-	@ Verificando se os parametros sao validos
-	CMP r0, #0x3F
-	MOVHI r0, #-1	@ Velocidade do motor 0 invalida
-	BHI SET_MOTORS_SPEED_END
-	CMP r1, #0x3F
-	MOVHI r0, #-2	@ Velocidade do motor 1 invalida
-	BHI SET_MOTORS_SPEED_END
-
-	@ Extrai apenas os 6 bits menos significativos de r0 e r1
-	LDR r2, =SPEED_msk
-	AND r0, r0, r2
-	AND r1, r1, r2
-
-	@ Pegando o valor do registrador DR
-	LDR r2, =DR
-	LDR r2, [r2]
-
-	@ Mascara dos bits relativos ao motor
-	LDR r3, =SPEED_DR_msk
-
-	@ Zerando os bits das velocidades dos motores
-	BIC r2, r2, r3, LSL #18
-	BIC r2, r2, r3, LSL #25
-
-	@ Inserindo novas velocidades
-	ORR r2, r2, r1, LSL #19
-	ORR r2, r2, r0, LSL #26
-	MOV r1, #1
-	BIC r2, r2, r1, LSL #18	@ Flag MOTOR0_WRITE <= 0
-	BIC r2, r2, r1, LSL #25	@ Flag MOTOR1_WRITE <= 0
-
-	@ Seta os pinos do registrador DR para concluir a operacao
-	LDR r1, =DR
-	STR r2, [r1]
-	MOV r0, #0	@ Retorno correto
-
-	SET_MOTORS_SPEED_END:
-		@ Retorna para a SVC_HANDLER
-		ldmfd sp!, {pc}
+@ SET_MOTORS_SPEED:
+@ 	stmfd sp!, {lr}
+@
+@ 	@ Verificando se os parametros sao validos
+@ 	CMP r0, #0x3F
+@ 	MOVHI r0, #-1	@ Velocidade do motor 0 invalida
+@ 	BHI SET_MOTORS_SPEED_END
+@ 	CMP r1, #0x3F
+@ 	MOVHI r0, #-2	@ Velocidade do motor 1 invalida
+@ 	BHI SET_MOTORS_SPEED_END
+@
+@ 	@ Extrai apenas os 6 bits menos significativos de r0 e r1
+@ 	LDR r2, =SPEED_msk
+@ 	AND r0, r0, r2
+@ 	AND r1, r1, r2
+@
+@ 	@ Pegando o valor do registrador DR
+@ 	LDR r2, =DR
+@ 	LDR r2, [r2]
+@
+@ 	@ Mascara dos bits relativos ao motor
+@ 	LDR r3, =SPEED_DR_msk
+@
+@ 	@ Zerando os bits das velocidades dos motores
+@ 	BIC r2, r2, r3, LSL #18
+@ 	BIC r2, r2, r3, LSL #25
+@
+@ 	@ Inserindo novas velocidades
+@ 	ORR r2, r2, r1, LSL #19
+@ 	ORR r2, r2, r0, LSL #26
+@ 	MOV r1, #1
+@ 	BIC r2, r2, r1, LSL #18	@ Flag MOTOR0_WRITE <= 0
+@ 	BIC r2, r2, r1, LSL #25	@ Flag MOTOR1_WRITE <= 0
+@
+@ 	@ Seta os pinos do registrador DR para concluir a operacao
+@ 	LDR r1, =DR
+@ 	STR r2, [r1]
+@ 	MOV r0, #0	@ Retorno correto
+@
+@ 	SET_MOTORS_SPEED_END:
+@ 		@ Retorna para a SVC_HANDLER
+@ 		ldmfd sp!, {pc}
 
 @ Le um sonar especifico
 @ Parametros:
@@ -525,7 +525,7 @@ READ_SONAR:
 	ORR r2, r2, r0, LSL #2
 
 	@ Flag TRIGGER <= 0
-	BIC r2, r2, #0b10	
+	BIC r2, r2, #0b10
 
 	@ Seta os pinos do registrador DR
 	LDR r1, =DR
@@ -582,7 +582,7 @@ READ_SONAR:
 	B FLAG_LOOP
 
 	FLAG_LOOP_END:
-	
+
 	@ Pegando o valor do registrador DR
 	LDR r3, [r1]
 
@@ -606,49 +606,49 @@ READ_SONAR:
 @		 -2 = id do sonar invalido
 @ Vetor de callbacks = id | distancia | funcao
 
-REGISTER_PROXIMITY_CALLBACK:
-	stmfd sp!, {r4, lr}
-
-	@ Carrega qtd callbacks e compara com o max
-	LDR r3, =CALLBACK_QTD
-	LDR r3, [r3]
-	CMP r3, #MAX_CALLBACKS
-	MOVGE r0, #-1	@ Erro na qtd de callbacks
-	BGE REGISTER_PROXIMITY_CALLBACK_END
-
-	@ Verifica se o id do sonar é valido
-	CMP r0, #15
-	MOVHI r0, #-2
-	BLS REGISTER_PROXIMITY_CALLBACK_END
-
-	@ Seta o indice da proxima casa do vetor
-	@ Vetor de callbacks = id | distancia | funcao (espaco na memoria por posicao = 4 * 3)
-	MOV r4, #12
-	MUL r4, r3 ,r4
-
-	@ Carrega o vetor de callbacks e salva id do sonar
-	LDR r3, =VET_CALLBACKS
-	STR r0, [r3, r4]
-
-	@ Adiciona a distancia
-	ADD r4, r4, #4
-	STR r1, [r3, r4]
-
-	@ Adiciona o ponteiro da funcao
-	ADD r4, r4, #4
-	STR r2, [r3, r4]
-
-	@ Incremente CALLBACK_QTD
-	LDR r2, =CALLBACK_QTD
-	LDR r3, [r2]
-	ADD r3, r3, #1
-	STR r3, [r2]
-
-	@ Retorna sucesso na operacao
-	MOV r0, #0
-
-	REGISTER_PROXIMITY_CALLBACK_END:
-		ldmfd sp!, {r4, pc}
+@ REGISTER_PROXIMITY_CALLBACK:
+@ 	stmfd sp!, {r4, lr}
+@
+@ 	@ Carrega qtd callbacks e compara com o max
+@ 	LDR r3, =CALLBACK_QTD
+@ 	LDR r3, [r3]
+@ 	CMP r3, #MAX_CALLBACKS
+@ 	MOVGE r0, #-1	@ Erro na qtd de callbacks
+@ 	BGE REGISTER_PROXIMITY_CALLBACK_END
+@
+@ 	@ Verifica se o id do sonar é valido
+@ 	CMP r0, #15
+@ 	MOVHI r0, #-2
+@ 	BLS REGISTER_PROXIMITY_CALLBACK_END
+@
+@ 	@ Seta o indice da proxima casa do vetor
+@ 	@ Vetor de callbacks = id | distancia | funcao (espaco na memoria por posicao = 4 * 3)
+@ 	MOV r4, #12
+@ 	MUL r4, r3 ,r4
+@
+@ 	@ Carrega o vetor de callbacks e salva id do sonar
+@ 	LDR r3, =VET_CALLBACKS
+@ 	STR r0, [r3, r4]
+@
+@ 	@ Adiciona a distancia
+@ 	ADD r4, r4, #4
+@ 	STR r1, [r3, r4]
+@
+@ 	@ Adiciona o ponteiro da funcao
+@ 	ADD r4, r4, #4
+@ 	STR r2, [r3, r4]
+@
+@ 	@ Incremente CALLBACK_QTD
+@ 	LDR r2, =CALLBACK_QTD
+@ 	LDR r3, [r2]
+@ 	ADD r3, r3, #1
+@ 	STR r3, [r2]
+@
+@ 	@ Retorna sucesso na operacao
+@ 	MOV r0, #0
+@
+@ 	REGISTER_PROXIMITY_CALLBACK_END:
+@ 		ldmfd sp!, {r4, pc}
 
 @ Retorna o tempo do sistema
 @ Retorno:
@@ -685,47 +685,47 @@ SET_TIME:
 @	r0 - 0 = sucesso / -1 = maximo de alarmes atingidos
 @		 -2 = tempo menor que tempo atual do sistema
 
-ADD_ALARM:
-	stmfd sp!, {lr}
-
-	@ Carrega qtd alarme e compara com o max
-	LDR r2, =ALARM_QTD
-	LDR r2, [r2]
-	CMP r2, #MAX_ALARMS
-	MOVGE r0, #-1	@ Erro na qtd de alarmes
-	BGE ADD_ALARM_END
-
-	@ Verifica se o tempo do alarme eh maior que o tempo do sistema
-	LDR r3, =SYSTEM_TIME
-	LDR r3, [r3]
-	CMP r3, r1
-	MOVLS r0, #-2
-	BLS ADD_ALARM_END
-
-	@ Seta o indice da proxima casa do vetor
-	@ Vetor de alarmes = endereco_func | tempo (espaco na memoria por posicao = 4 * 2)
-	MOV r3, #8
-	MUL r3, r2 ,r3
-
-	@ Carrega o vetor de alarmes e salva endereco_func
-	LDR r2, =VET_ALARMES
-	STR r0, [r2, r3]
-
-	@ Adiciona o tempo do alarme
-	ADD r3, r3, #4
-	STR r1, [r2, r3]
-
-	@ Incremento de ALARM_QTD
-	LDR r2, =ALARM_QTD
-	LDR r3, [r2]
-	ADD r3, r3, #1
-	STR r3, [r2]
-
-	@ Retorna sucesso na operacao
-	MOV r0, #0
-
-	ADD_ALARM_END:
-		ldmfd sp!, {pc}
+@ ADD_ALARM:
+@ 	stmfd sp!, {lr}
+@
+@ 	@ Carrega qtd alarme e compara com o max
+@ 	LDR r2, =ALARM_QTD
+@ 	LDR r2, [r2]
+@ 	CMP r2, #MAX_ALARMS
+@ 	MOVGE r0, #-1	@ Erro na qtd de alarmes
+@ 	BGE ADD_ALARM_END
+@
+@ 	@ Verifica se o tempo do alarme eh maior que o tempo do sistema
+@ 	LDR r3, =SYSTEM_TIME
+@ 	LDR r3, [r3]
+@ 	CMP r3, r1
+@ 	MOVLS r0, #-2
+@ 	BLS ADD_ALARM_END
+@
+@ 	@ Seta o indice da proxima casa do vetor
+@ 	@ Vetor de alarmes = endereco_func | tempo (espaco na memoria por posicao = 4 * 2)
+@ 	MOV r3, #8
+@ 	MUL r3, r2 ,r3
+@
+@ 	@ Carrega o vetor de alarmes e salva endereco_func
+@ 	LDR r2, =VET_ALARMES
+@ 	STR r0, [r2, r3]
+@
+@ 	@ Adiciona o tempo do alarme
+@ 	ADD r3, r3, #4
+@ 	STR r1, [r2, r3]
+@
+@ 	@ Incremento de ALARM_QTD
+@ 	LDR r2, =ALARM_QTD
+@ 	LDR r3, [r2]
+@ 	ADD r3, r3, #1
+@ 	STR r3, [r2]
+@
+@ 	@ Retorna sucesso na operacao
+@ 	MOV r0, #0
+@
+@ 	ADD_ALARM_END:
+@ 		ldmfd sp!, {pc}
 
 
 .data
@@ -733,6 +733,6 @@ ADD_ALARM:
 	CALLBACK_QTD: .word 0
 	ALARM_QTD: .word 0
 
-	
-	VET_ALARMES:	.skip 64	
-	VET_CALLBACKS:	.skip 96	
+
+	VET_ALARMES:	.skip 64
+	VET_CALLBACKS:	.skip 96

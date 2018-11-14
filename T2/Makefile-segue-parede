@@ -14,8 +14,7 @@ SOUL_OBJS=soul.o
 AS=arm-eabi-as
 AS_FLAGS=-g
 
-CC=arm-eabi-gcc
-CC_FLAGS=-g
+CC=arm-none-eabi-gcc
 
 LD=arm-eabi-ld
 LD_FLAGS=-g
@@ -40,7 +39,7 @@ SOUL.x: $(SOUL_OBJS)
 	$(LD) $^ -o $@ $(LD_FLAGS) --section-start=.iv=0x778005e0 -Ttext=0x77800700 -Tdata=0x77801800 -e 0x778005e0
 
 LOCO.x: $(USER_PRG) bico.o
-	$(LD) $^ -o $@ $(LD_FLAGS) -Ttext=0x77802000
+	$(LD) $^ -o $@ $(LD_FLAGS) -Ttext=0x77812000
 
 disk.img: SOUL.x LOCO.x
 	mksd.sh --so SOUL.x --user LOCO.x
