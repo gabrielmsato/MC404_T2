@@ -17,13 +17,8 @@ void _start(void)
   motor1.id = 1;
   motor1.speed = 25;
 
-  set_motors_speed(&motor0, &motor1);
-
-  add_alarm(virar, qtdTempo * 100);
-
-  register_proximity_callback(3, 600, virar1);
-  register_proximity_callback(4, 600, virar2);
-
+  set_motor_speed(&motor0);
+  set_motor_speed(&motor1);
   while(1);
 }
 
@@ -36,21 +31,21 @@ void virar() {
   motor_cfg_t motor1;
   motor1.id = 1;
   motor1.speed =0;
-  set_motors_speed(&motor0, &motor1);
+  set_motor_speed(&motor0);
+  set_motor_speed(&motor1);
 
   for(i = 0; i < 9000;i++);
 
   motor0.speed = 25;
   motor0.speed = 25;
 
-  set_motors_speed(&motor0, &motor1);
+  set_motor_speed(&motor0);
+  set_motor_speed(&motor1);
 
   if (qtdTempo == 50)
     qtdTempo = 0;
   else
     qtdTempo++;
-
-  add_alarm(virar, qtdTempo * 100);
 }
 
 void virar1() {
@@ -62,14 +57,15 @@ void virar1() {
   motor_cfg_t motor1;
   motor1.id = 1;
   motor1.speed =0;
-  set_motors_speed(&motor0, &motor1);
+  set_motor_speed(&motor0);
+  set_motor_speed(&motor1);
 
   for(i = 0; i < 9000;i++);
 
   motor0.speed = 25;
   motor0.speed = 25;
-  set_motors_speed(&motor0, &motor1);
-  register_proximity_callback(3, 600, virar1);
+  set_motor_speed(&motor0);
+  set_motor_speed(&motor1);
 }
 
 void virar2() {
@@ -81,12 +77,13 @@ void virar2() {
   motor_cfg_t motor1;
   motor1.id = 1;
   motor1.speed =0;
-  set_motors_speed(&motor0, &motor1);
+  set_motor_speed(&motor0);
+  set_motor_speed(&motor1);
 
   for(i = 0; i < 9000;i++);
 
   motor0.speed = 25;
   motor0.speed = 25;
-  set_motors_speed(&motor0, &motor1);
-  register_proximity_callback(4, 600, virar2);
+  set_motor_speed(&motor0);
+  set_motor_speed(&motor1);
 }
