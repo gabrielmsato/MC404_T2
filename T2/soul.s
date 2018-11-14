@@ -45,12 +45,12 @@ RESET_HANDLER:
     str r0, [r2]
 
     @ Zera o contador de callbacks
-    ldr r2, =CALLBACK_QTD
-    str r0, [r2]
+    @ldr r2, =CALLBACK_QTD
+    @str r0, [r2]
 
     @ Zera o contador de alarmes
-    ldr r2, =ALARM_QTD
-    str r0, [r2]
+    @ldr r2, =ALARM_QTD
+    @str r0, [r2]
 
     @Faz o registrador que aponta para a tabela de interrupções apontar para a tabela interrupt_vector
     ldr r0, =interrupt_vector
@@ -178,153 +178,153 @@ IRQ_HANDLER:
     msr CPSR_c, #0x10
 
     @ Checando alarmes ----------------------------------
-	MOV r0, #0 @ Indice do for
+	@MOV r0, #0 @ Indice do for
 
 	@ Pegando quantidade de alarmes
-	LDR r1, =ALARM_QTD
-	LDR r1, [r1]
+	@LDR r1, =ALARM_QTD
+	@LDR r1, [r1]
 
 	@ Carrega o vetor de alarmes
-	LDR r2, =VET_ALARMES
+	@LDR r2, =VET_ALARMES
 
-	MOV r3, #0	@ Indice do contador de alarmes
+	@MOV r3, #0	@ Indice do contador de alarmes
 
     @ Vetor de alarmes = endereco_func | tempo (espaco na memoria por posicao = 4 * 2)
-    ALARM_CHECK:
+    @ALARM_CHECK:
     	@ Se indice = qtd, termina
-    	CMP r1, r0
-    	BEQ ALARM_CHECK_END
+    	@CMP r1, r0
+    	@BEQ ALARM_CHECK_END
 
     	@ Extrai o tempo do alarme
-    	ADD r3, r3, #4
-    	LDR r4, [r2, r3]
+    	@ADD r3, r3, #4
+    	@LDR r4, [r2, r3]
 
     	@ Verifica se tempo de sistema = alarme
-    	LDR r5, =SYSTEM_TIME
-    	LDR r5, [r5]
-    	CMP r4, r5
-    	BLNE PROX_ALARME
+    	@LDR r5, =SYSTEM_TIME
+    	@LDR r5, [r5]
+    	@CMP r4, r5
+    	@BLNE PROX_ALARME
 
     	@ Indice do ultimo alarme
-    	MOV r4, #8
-    	MUL r4, r1, r4
-    	SUB r4, r4, #8
+    	@MOV r4, #8
+    	@MUL r4, r1, r4
+    	@SUB r4, r4, #8
 
     	@ Guardando funcao a ser chamada
-    	SUB r3, r3, #4
-    	LDR r6, [r2, r3]
+    	@SUB r3, r3, #4
+    	@LDR r6, [r2, r3]
 
     	@ Substituindo ultimo alarme pelo executado
-    	LDR r7, [r2, r4]
-    	STR r7, [r2, r3]
-    	ADD r4, r4, #4
-    	ADD r3, r3, #4
-    	LDR r7, [r2, r4]
-    	STR r7, [r2, r3]
+    	@LDR r7, [r2, r4]
+    	@STR r7, [r2, r3]
+    	@ADD r4, r4, #4
+    	@ADD r3, r3, #4
+    	@LDR r7, [r2, r4]
+    	@STR r7, [r2, r3]
 
     	@ Decrementando qtd alarmes
-    	LDR r4, =ALARM_QTD
-    	LDR r7, [r4]
-    	SUB r7, r7, #1
-    	STR r7, [r4]
+    	@LDR r4, =ALARM_QTD
+    	@LDR r7, [r4]
+    	@SUB r7, r7, #1
+    	@STR r7, [r4]
 
     	@ Chama a funcao do alarme
-    	stmfd sp!, {lr}
-	    blx r6
-	    ldmfd sp!, {lr}
+    	@stmfd sp!, {lr}
+	    @blx r6
+	    @ldmfd sp!, {lr}
 
 
-    	PROX_ALARME:
+    	@PROX_ALARME:
     	@ Incrementando o for e incrementando o indice do vetor
-    	ADD r0, r0, #1
-    	ADD r3, r3, #4
+    	@ADD r0, r0, #1
+    	@ADD r3, r3, #4
 
-    	B ALARM_CHECK
-    ALARM_CHECK_END:
+    	@B ALARM_CHECK
+    @ALARM_CHECK_END:
 
     @ Checando callbacks ----------------------------
 
-    MOV r0, #0 @ Indice do for
+    @MOV r0, #0 @ Indice do for
 
 	@ Pegando quantidade de alarmes
-	LDR r1, =CALLBACK_QTD
-	LDR r1, [r1]
+	@LDR r1, =CALLBACK_QTD
+	@LDR r1, [r1]
 
 	@ Carrega o vetor de alarmes
-	LDR r2, =VET_CALLBACKS
+	@ r2, =VET_CALLBACKS
 
-	MOV r3, #0	@ Indice do contador de alarmes
+	@MOV r3, #0	@ Indice do contador de alarmes
 
 	@ Vetor de callbacks = id | distancia | funcao
-	CALLBACK_CHECK:
+	@CALLBACK_CHECK:
     	@ Se indice = qtd, termina
-    	CMP r1, r0
-    	BEQ CALLBACK_CHECK_END
+    	@CMP r1, r0
+    	@BEQ CALLBACK_CHECK_END
 
     	@ Extrai id do sonar
-    	MOV r4, r0
-    	LDR r0, [r2, r3]
+    	@MOV r4, r0
+    	@LDR r0, [r2, r3]
 
     	@ Empilha registradores caller save
-    	stmfd sp!, {r1-r3}
+    	@stmfd sp!, {r1-r3}
 
     	@ Chama interrupcao svc para ler sonar
-    	MOV r7, #16
-    	svc 0x0
+    	@MOV r7, #16
+    	@svc 0x0
 
     	@ Desempilha registradores caller save
-    	ldmfd sp!, {r1-r3}
+    	@ldmfd sp!, {r1-r3}
 
     	@ Retorna valor antigo de r0
-    	MOV r5, r0
-    	MOV r0, r4
+    	@MOV r5, r0
+    	@MOV r0, r4
 
     	@ Extrai o limiar de distancia e compara com valor lido
-    	ADD r3, r3, #4
-    	LDR r4, [r2, r3]
-    	CMP r4, r5
-    	BLHI PROX_CALLBACK
+    	@ADD r3, r3, #4
+    	@LDR r4, [r2, r3]
+    	@CMP r4, r5
+    	@BLHI PROX_CALLBACK
 
     	@ Indice da ultima callback
-    	MOV r4, #12
-    	MUL r4, r1, r4
-    	SUB r4, r4, #12
+    	@MOV r4, #12
+    	@MUL r4, r1, r4
+    	@SUB r4, r4, #12
 
     	@ Guardando funcao a ser chamada
-    	ADD r3, r3, #4
-    	LDR r6, [r2, r3]
+    	@ADD r3, r3, #4
+    	@LDR r6, [r2, r3]
 
     	@ Substituindo ultima callback pela executada
-    	SUB r3, r3, #8
-    	LDR r7, [r2, r4]
-    	STR r7, [r2, r3]
-    	ADD r4, r4, #4
-    	ADD r3, r3, #4
-    	LDR r7, [r2, r4]
-    	STR r7, [r2, r3]
-    	ADD r4, r4, #4
-    	ADD r3, r3, #4
-    	LDR r7, [r2, r4]
-    	STR r7, [r2, r3]
+    	@SUB r3, r3, #8
+    	@LDR r7, [r2, r4]
+    	@STR r7, [r2, r3]
+    	@ADD r4, r4, #4
+    	@ADD r3, r3, #4
+    	@LDR r7, [r2, r4]
+    	@STR r7, [r2, r3]
+    	@ADD r4, r4, #4
+    	@ADD r3, r3, #4
+    	@LDR r7, [r2, r4]
+    	@STR r7, [r2, r3]
 
     	@ Decrementando qtd callbacks
-    	LDR r4, =CALLBACK_QTD
-    	LDR r7, [r4]
-    	SUB r7, r7, #1
-    	STR r7, [r4]
+    	@LDR r4, =CALLBACK_QTD
+    	@LDR r7, [r4]
+    	@SUB r7, r7, #1
+    	@STR r7, [r4]
 
     	@ Chama a funcao da callback
-    	stmfd sp!, {lr}
-	    blx r6
-	    ldmfd sp!, {lr}
+    	@stmfd sp!, {lr}
+	    @blx r6
+	    @ldmfd sp!, {lr}
 
-    	PROX_CALLBACK:
+    	@PROX_CALLBACK:
     	@ Incrementando o for e incrementando o indice do vetor
-    	ADD r0, r0, #1
-    	ADD r3, r3, #4
+    	@ADD r0, r0, #1
+    	@ADD r3, r3, #4
 
-    	B CALLBACK_CHECK
-    CALLBACK_CHECK_END:
+    	@B CALLBACK_CHECK
+    @CALLBACK_CHECK_END:
 
     @ Chama syscall para mudar para modo SUPERVISOR
     MOV r7, #50
@@ -730,9 +730,9 @@ SET_TIME:
 
 .data
 	SYSTEM_TIME: .word 0
-	CALLBACK_QTD: .word 0
-	ALARM_QTD: .word 0
+	@CALLBACK_QTD: .word 0
+	@ALARM_QTD: .word 0
 
 
-	VET_ALARMES:	.skip 64
-	VET_CALLBACKS:	.skip 96
+	@VET_ALARMES:	.skip 64
+	@VET_CALLBACKS:	.skip 96
