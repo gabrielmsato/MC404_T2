@@ -1,7 +1,7 @@
 #include "api_robot2.h"
 
 void busca_parede(unsigned int* distancias);
-// void segue_parede(unsigned int* distancias);
+void segue_parede(unsigned int* distancias);
 void corrigir1();
 void corrigir2();
 void virar1();
@@ -28,6 +28,8 @@ void busca_parede(unsigned int* distancias) {
   set_motor_speed(&motor0);
   set_motor_speed(&motor1);
 
+	distancias[3] = read_sonar(3);
+    distancias[4] = read_sonar(4);
   while (distancias[3] > 600 && distancias[4] > 600) {
     distancias[3] = read_sonar(3);
     distancias[4] = read_sonar(4);
