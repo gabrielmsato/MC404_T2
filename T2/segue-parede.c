@@ -36,9 +36,16 @@ void busca_parede(unsigned int* distancias) {
   }
 
   motor0.speed = 0;
+  motor1.speed=0;
   set_motor_speed(&motor0);
   set_motor_speed(&motor1);
-  for(i = 0; i < 9000;i++);
+  distancias[3] = read_sonar(3);
+    distancias[4] = read_sonar(4);
+  for(i = 0; i < 9000;i++){
+	  
+  distancias[3] = read_sonar(3);
+    distancias[4] = read_sonar(4);
+	  };
 
   motor0.speed = 25;
   motor1.speed = 25;

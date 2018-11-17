@@ -44,14 +44,6 @@ RESET_HANDLER:
     mov r0, #0
     str r0, [r2]
 
-    @ Zera o contador de callbacks
-    @ldr r2, =CALLBACK_QTD
-    @str r0, [r2]
-
-    @ Zera o contador de alarmes
-    @ldr r2, =ALARM_QTD
-    @str r0, [r2]
-
     @Faz o registrador que aponta para a tabela de interrupções apontar para a tabela interrupt_vector
     ldr r0, =interrupt_vector
     mcr p15, 0, r0, c12, c0, 0
