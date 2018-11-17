@@ -177,155 +177,6 @@ IRQ_HANDLER:
     @ Entrando em modo usuario
     msr CPSR_c, #0x10
 
-    @ Checando alarmes ----------------------------------
-	@MOV r0, #0 @ Indice do for
-
-	@ Pegando quantidade de alarmes
-	@LDR r1, =ALARM_QTD
-	@LDR r1, [r1]
-
-	@ Carrega o vetor de alarmes
-	@LDR r2, =VET_ALARMES
-
-	@MOV r3, #0	@ Indice do contador de alarmes
-
-    @ Vetor de alarmes = endereco_func | tempo (espaco na memoria por posicao = 4 * 2)
-    @ALARM_CHECK:
-    	@ Se indice = qtd, termina
-    	@CMP r1, r0
-    	@BEQ ALARM_CHECK_END
-
-    	@ Extrai o tempo do alarme
-    	@ADD r3, r3, #4
-    	@LDR r4, [r2, r3]
-
-    	@ Verifica se tempo de sistema = alarme
-    	@LDR r5, =SYSTEM_TIME
-    	@LDR r5, [r5]
-    	@CMP r4, r5
-    	@BLNE PROX_ALARME
-
-    	@ Indice do ultimo alarme
-    	@MOV r4, #8
-    	@MUL r4, r1, r4
-    	@SUB r4, r4, #8
-
-    	@ Guardando funcao a ser chamada
-    	@SUB r3, r3, #4
-    	@LDR r6, [r2, r3]
-
-    	@ Substituindo ultimo alarme pelo executado
-    	@LDR r7, [r2, r4]
-    	@STR r7, [r2, r3]
-    	@ADD r4, r4, #4
-    	@ADD r3, r3, #4
-    	@LDR r7, [r2, r4]
-    	@STR r7, [r2, r3]
-
-    	@ Decrementando qtd alarmes
-    	@LDR r4, =ALARM_QTD
-    	@LDR r7, [r4]
-    	@SUB r7, r7, #1
-    	@STR r7, [r4]
-
-    	@ Chama a funcao do alarme
-    	@stmfd sp!, {lr}
-	    @blx r6
-	    @ldmfd sp!, {lr}
-
-
-    	@PROX_ALARME:
-    	@ Incrementando o for e incrementando o indice do vetor
-    	@ADD r0, r0, #1
-    	@ADD r3, r3, #4
-
-    	@B ALARM_CHECK
-    @ALARM_CHECK_END:
-
-    @ Checando callbacks ----------------------------
-
-    @MOV r0, #0 @ Indice do for
-
-	@ Pegando quantidade de alarmes
-	@LDR r1, =CALLBACK_QTD
-	@LDR r1, [r1]
-
-	@ Carrega o vetor de alarmes
-	@ r2, =VET_CALLBACKS
-
-	@MOV r3, #0	@ Indice do contador de alarmes
-
-	@ Vetor de callbacks = id | distancia | funcao
-	@CALLBACK_CHECK:
-    	@ Se indice = qtd, termina
-    	@CMP r1, r0
-    	@BEQ CALLBACK_CHECK_END
-
-    	@ Extrai id do sonar
-    	@MOV r4, r0
-    	@LDR r0, [r2, r3]
-
-    	@ Empilha registradores caller save
-    	@stmfd sp!, {r1-r3}
-
-    	@ Chama interrupcao svc para ler sonar
-    	@MOV r7, #16
-    	@svc 0x0
-
-    	@ Desempilha registradores caller save
-    	@ldmfd sp!, {r1-r3}
-
-    	@ Retorna valor antigo de r0
-    	@MOV r5, r0
-    	@MOV r0, r4
-
-    	@ Extrai o limiar de distancia e compara com valor lido
-    	@ADD r3, r3, #4
-    	@LDR r4, [r2, r3]
-    	@CMP r4, r5
-    	@BLHI PROX_CALLBACK
-
-    	@ Indice da ultima callback
-    	@MOV r4, #12
-    	@MUL r4, r1, r4
-    	@SUB r4, r4, #12
-
-    	@ Guardando funcao a ser chamada
-    	@ADD r3, r3, #4
-    	@LDR r6, [r2, r3]
-
-    	@ Substituindo ultima callback pela executada
-    	@SUB r3, r3, #8
-    	@LDR r7, [r2, r4]
-    	@STR r7, [r2, r3]
-    	@ADD r4, r4, #4
-    	@ADD r3, r3, #4
-    	@LDR r7, [r2, r4]
-    	@STR r7, [r2, r3]
-    	@ADD r4, r4, #4
-    	@ADD r3, r3, #4
-    	@LDR r7, [r2, r4]
-    	@STR r7, [r2, r3]
-
-    	@ Decrementando qtd callbacks
-    	@LDR r4, =CALLBACK_QTD
-    	@LDR r7, [r4]
-    	@SUB r7, r7, #1
-    	@STR r7, [r4]
-
-    	@ Chama a funcao da callback
-    	@stmfd sp!, {lr}
-	    @blx r6
-	    @ldmfd sp!, {lr}
-
-    	@PROX_CALLBACK:
-    	@ Incrementando o for e incrementando o indice do vetor
-    	@ADD r0, r0, #1
-    	@ADD r3, r3, #4
-
-    	@B CALLBACK_CHECK
-    @CALLBACK_CHECK_END:
-
     @ Chama syscall para mudar para modo SUPERVISOR
     MOV r7, #50
     svc 0x0
@@ -353,18 +204,12 @@ SVC_HANDLER:
 	@ Comparacoes para determinar qual o tipo de syscall
 	CMP r7, #21
 	BLEQ READ_SONAR
-	@ CMP r7, #17
-	@ BLEQ REGISTER_PROXIMITY_CALLBACK
 	CMP r7, #20
 	BLEQ SET_MOTOR_SPEED
-	@ CMP r7, #19
-	@ BLEQ SET_MOTORS_SPEED
 	CMP r7, #17
 	BLEQ GET_TIME
 	CMP r7, #18
 	BLEQ SET_TIME
-	@ CMP r7, #22
-	@ BLEQ ADD_ALARM
 
 	@ Syscall utilizada para mudar para SUPERVISOR
 	CMP r7, #50
@@ -445,58 +290,6 @@ SET_MOTOR_SPEED:
 	SET_MOTOR_SPEED_END:
 		@ Retorna para a SVC_HANDLER
 		ldmfd sp!, {r4, pc}
-
-
-@ Escreve nos pinos dos 2 motores as velocidades
-@ Parametros:
-@ 	r0 - Velocidade do motor 0
-@	r1 - Velocidade do motor 1
-@ Retorno:
-@	r0 - 0 = sucesso / -1 = erro na velocidade do motor 0 /
-@		 -2 = erro na velocidade do motor 1
-
-@ SET_MOTORS_SPEED:
-@ 	stmfd sp!, {lr}
-@
-@ 	@ Verificando se os parametros sao validos
-@ 	CMP r0, #0x3F
-@ 	MOVHI r0, #-1	@ Velocidade do motor 0 invalida
-@ 	BHI SET_MOTORS_SPEED_END
-@ 	CMP r1, #0x3F
-@ 	MOVHI r0, #-2	@ Velocidade do motor 1 invalida
-@ 	BHI SET_MOTORS_SPEED_END
-@
-@ 	@ Extrai apenas os 6 bits menos significativos de r0 e r1
-@ 	LDR r2, =SPEED_msk
-@ 	AND r0, r0, r2
-@ 	AND r1, r1, r2
-@
-@ 	@ Pegando o valor do registrador DR
-@ 	LDR r2, =DR
-@ 	LDR r2, [r2]
-@
-@ 	@ Mascara dos bits relativos ao motor
-@ 	LDR r3, =SPEED_DR_msk
-@
-@ 	@ Zerando os bits das velocidades dos motores
-@ 	BIC r2, r2, r3, LSL #18
-@ 	BIC r2, r2, r3, LSL #25
-@
-@ 	@ Inserindo novas velocidades
-@ 	ORR r2, r2, r1, LSL #19
-@ 	ORR r2, r2, r0, LSL #26
-@ 	MOV r1, #1
-@ 	BIC r2, r2, r1, LSL #18	@ Flag MOTOR0_WRITE <= 0
-@ 	BIC r2, r2, r1, LSL #25	@ Flag MOTOR1_WRITE <= 0
-@
-@ 	@ Seta os pinos do registrador DR para concluir a operacao
-@ 	LDR r1, =DR
-@ 	STR r2, [r1]
-@ 	MOV r0, #0	@ Retorno correto
-@
-@ 	SET_MOTORS_SPEED_END:
-@ 		@ Retorna para a SVC_HANDLER
-@ 		ldmfd sp!, {pc}
 
 @ Le um sonar especifico
 @ Parametros:
@@ -595,61 +388,6 @@ READ_SONAR:
 		@ Retorna para a SVC_HANDLER
 		ldmfd sp!, {pc}
 
-
-@ Adiciona no vetor de callback um callback
-@ Parametros:
-@ 	r0 - Id do sonar
-@	r1 - Limiar de distancia
-@	r2 - Ponteiro para a funcao
-@ Retorno:
-@	r0 - 0 = sucesso / -1 = numero de callbacks max atingido
-@		 -2 = id do sonar invalido
-@ Vetor de callbacks = id | distancia | funcao
-
-@ REGISTER_PROXIMITY_CALLBACK:
-@ 	stmfd sp!, {r4, lr}
-@
-@ 	@ Carrega qtd callbacks e compara com o max
-@ 	LDR r3, =CALLBACK_QTD
-@ 	LDR r3, [r3]
-@ 	CMP r3, #MAX_CALLBACKS
-@ 	MOVGE r0, #-1	@ Erro na qtd de callbacks
-@ 	BGE REGISTER_PROXIMITY_CALLBACK_END
-@
-@ 	@ Verifica se o id do sonar é valido
-@ 	CMP r0, #15
-@ 	MOVHI r0, #-2
-@ 	BLS REGISTER_PROXIMITY_CALLBACK_END
-@
-@ 	@ Seta o indice da proxima casa do vetor
-@ 	@ Vetor de callbacks = id | distancia | funcao (espaco na memoria por posicao = 4 * 3)
-@ 	MOV r4, #12
-@ 	MUL r4, r3 ,r4
-@
-@ 	@ Carrega o vetor de callbacks e salva id do sonar
-@ 	LDR r3, =VET_CALLBACKS
-@ 	STR r0, [r3, r4]
-@
-@ 	@ Adiciona a distancia
-@ 	ADD r4, r4, #4
-@ 	STR r1, [r3, r4]
-@
-@ 	@ Adiciona o ponteiro da funcao
-@ 	ADD r4, r4, #4
-@ 	STR r2, [r3, r4]
-@
-@ 	@ Incremente CALLBACK_QTD
-@ 	LDR r2, =CALLBACK_QTD
-@ 	LDR r3, [r2]
-@ 	ADD r3, r3, #1
-@ 	STR r3, [r2]
-@
-@ 	@ Retorna sucesso na operacao
-@ 	MOV r0, #0
-@
-@ 	REGISTER_PROXIMITY_CALLBACK_END:
-@ 		ldmfd sp!, {r4, pc}
-
 @ Retorna o tempo do sistema
 @ Retorno:
 @	r0 - Valor de SYSTEM_TIME
@@ -676,63 +414,5 @@ SET_TIME:
 
 	ldmfd sp!, {pc}
 
-
-@ Adiciona um alarme no sistema
-@ Parametros:
-@ 	r0 - Ponteiro para funcao a ser chamada
-@	r1 - Tempo do alarme
-@ Retorno:
-@	r0 - 0 = sucesso / -1 = maximo de alarmes atingidos
-@		 -2 = tempo menor que tempo atual do sistema
-
-@ ADD_ALARM:
-@ 	stmfd sp!, {lr}
-@
-@ 	@ Carrega qtd alarme e compara com o max
-@ 	LDR r2, =ALARM_QTD
-@ 	LDR r2, [r2]
-@ 	CMP r2, #MAX_ALARMS
-@ 	MOVGE r0, #-1	@ Erro na qtd de alarmes
-@ 	BGE ADD_ALARM_END
-@
-@ 	@ Verifica se o tempo do alarme eh maior que o tempo do sistema
-@ 	LDR r3, =SYSTEM_TIME
-@ 	LDR r3, [r3]
-@ 	CMP r3, r1
-@ 	MOVLS r0, #-2
-@ 	BLS ADD_ALARM_END
-@
-@ 	@ Seta o indice da proxima casa do vetor
-@ 	@ Vetor de alarmes = endereco_func | tempo (espaco na memoria por posicao = 4 * 2)
-@ 	MOV r3, #8
-@ 	MUL r3, r2 ,r3
-@
-@ 	@ Carrega o vetor de alarmes e salva endereco_func
-@ 	LDR r2, =VET_ALARMES
-@ 	STR r0, [r2, r3]
-@
-@ 	@ Adiciona o tempo do alarme
-@ 	ADD r3, r3, #4
-@ 	STR r1, [r2, r3]
-@
-@ 	@ Incremento de ALARM_QTD
-@ 	LDR r2, =ALARM_QTD
-@ 	LDR r3, [r2]
-@ 	ADD r3, r3, #1
-@ 	STR r3, [r2]
-@
-@ 	@ Retorna sucesso na operacao
-@ 	MOV r0, #0
-@
-@ 	ADD_ALARM_END:
-@ 		ldmfd sp!, {pc}
-
-
 .data
 	SYSTEM_TIME: .word 0
-	@CALLBACK_QTD: .word 0
-	@ALARM_QTD: .word 0
-
-
-	@VET_ALARMES:	.skip 64
-	@VET_CALLBACKS:	.skip 96
