@@ -30,13 +30,11 @@ RESET_HANDLER:
 	.set GDIR, 			0x53F84004
 	.set GDIR_msk,		0xFFFC003E
 	.set PSR, 			0x53F84008
-	.set MAX_ALARMS,	0x8
-	.set MAX_CALLBACKS,	0x8
 
-	.set MAIN,			0x77802000
-	.set IRQ_STACK, 	0x77816000
-	.set SVC_STACK,		0x77818000
-	.set SYS_STACK,		0x77820000
+	.set MAIN,			0x77812000
+	.set IRQ_STACK, 	0x77826000
+	.set SVC_STACK,		0x77838000
+	.set SYS_STACK,		0x77840000 @AUMENTEI 1
 
 
     @ Zera o contador do sistema
@@ -157,7 +155,7 @@ IRQ_HANDLER:
 
 	@ Informa que a interrupcao foi capturada
     LDR r2, =GPT_SR
-    MOV r1, #0x1
+    MOV r1, #1
     STR r1, [r2]
 
     @ Incrementa o contador
@@ -211,8 +209,7 @@ SVC_HANDLER:
 	ADD sp, sp, #4
 
 	@ Retorna para a funcao que chamou em modo SUPERVISOR
-	ldmfd sp!, {lr}
-    mov pc, lr
+	ldmfd sp!, {pc}
 
 	SVC_HANDLER_END:
 	@ Retorna ao modo antigo do programa
@@ -233,13 +230,14 @@ SVC_HANDLER:
 @ Escreve nos pinos do motor escolhido uma velocidade
 @ Parametros:
 @ 	r0 - Id do motor
-@	r1 - Velocidade do motor
+@	  r1 - Velocidade do motor
 @ Retorno:
-@	r0 - 0 = sucesso / -1 = erro no id do motor / -2 = erro na velocidade
+@	  r0 - 0 = sucesso / -1 = erro no id do motor / -2 = erro na velocidade
 
 SET_MOTOR_SPEED:
 	stmfd sp!, {r4, lr}
 
+  msr  CPSR_c, #0x1F
 	@ Verificando se os parametros sao validos
 	CMP r0, #1
 	MOVHI r0, #-1	@ ID invalido
@@ -281,19 +279,20 @@ SET_MOTOR_SPEED:
 
 	SET_MOTOR_SPEED_END:
 		@ Retorna para a SVC_HANDLER
+    msr  CPSR_c, #0x13
 		ldmfd sp!, {r4, pc}
 
 @ Le um sonar especifico
 @ Parametros:
 @ 	r0 - Id do sonar
 @ Retorno:
-@	r0 - valor do sonar / -1 = erro do id do sonar
+@	  r0 - valor do sonar / -1 = erro do id do sonar
 
 READ_SONAR:
-	stmfd sp!, {lr}
-
+	stmfd sp!, {r4, lr}
+  msr  CPSR_c, #0x1F
 	@ Verificando se os parametros sao validos
-	CMP r0, #15
+	CMP r0, #0xF
 	MOVHI r0, #-1	@ Erro no id do sonar
 	BHI READ_SONAR_END
 
@@ -323,7 +322,7 @@ READ_SONAR:
 		CMP r4, #0
 		BEQ DELAY_SONAR_END1
 		SUB r4, r4, #1
-	B DELAY_SONAR_LOOP1
+	  B DELAY_SONAR_LOOP1
 	DELAY_SONAR_END1:
 
 
@@ -349,7 +348,7 @@ READ_SONAR:
 		@ Pegando o valor do registrador DR
 		LDR r3, [r1]
 
-		@ Verificando de a FLAG = 1
+		@ Verificando se a FLAG = 1
 		AND r3, r3, #1
 		CMP r3, #1
 		BEQ FLAG_LOOP_END
@@ -357,11 +356,11 @@ READ_SONAR:
 		@ Delay para executar as operacoes
 		MOV r4, #4096
 
-		DELAY_SONAR_LOOP3:
-			CMP r4, #0
-			BEQ DELAY_SONAR_END3
-			SUB r4, r4, #1
-		B DELAY_SONAR_LOOP3
+		 DELAY_SONAR_LOOP3:
+		  CMP r4, #0
+		  BEQ DELAY_SONAR_END3
+		  SUB r4, r4, #1
+	   B DELAY_SONAR_LOOP3
 		DELAY_SONAR_END3:
 
 	B FLAG_LOOP
@@ -378,7 +377,8 @@ READ_SONAR:
 
 	READ_SONAR_END:
 		@ Retorna para a SVC_HANDLER
-		ldmfd sp!, {pc}
+    msr  CPSR_c, #0x13
+		ldmfd sp!, {r4, pc}
 
 @ Retorna o tempo do sistema
 @ Retorno:
@@ -399,12 +399,13 @@ GET_TIME:
 
 SET_TIME:
 	stmfd sp!, {lr}
-
+  msr  CPSR_c, #0x1F
 	@ Seta o tempo passado como parametro em SYSTEM_TIME
 	LDR r1, =SYSTEM_TIME
 	STR r0, [r1]
-
+  msr  CPSR_c, #0x13
 	ldmfd sp!, {pc}
 
 .data
+.org 0x0
 	SYSTEM_TIME: .word 0

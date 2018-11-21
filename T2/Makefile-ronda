@@ -14,8 +14,7 @@ SOUL_OBJS=soul.o
 AS=arm-eabi-as
 AS_FLAGS=-g
 
-CC=arm-eabi-gcc
-CC_FLAGS=-g
+CC=arm-none-eabi-gcc
 
 LD=arm-eabi-ld
 LD_FLAGS=-g

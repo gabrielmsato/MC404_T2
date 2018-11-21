@@ -1,3 +1,4 @@
+.global _start
 .global set_motor_speed
 .global read_sonar
 .global get_time
