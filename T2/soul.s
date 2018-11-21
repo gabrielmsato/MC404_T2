@@ -17,26 +17,6 @@ interrupt_vector:
 
 RESET_HANDLER:
 
-	@ Valores e enderecos do GPT
-	.set GPT_CR, 		0x53FA0000
-	.set GPT_PR, 		0x53FA0004
-	.set GPT_OCR1, 		0x53FA0010
-	.set GPT_IR, 		0x53FA000C
-	.set GPT_SR, 		0x53FA0008
-	.set TIME_SZ,		200
-
-	@ Valores e enderecos do GPIO
-	.set DR,			0x53F84000
-	.set GDIR, 			0x53F84004
-	.set GDIR_msk,		0xFFFC003E
-	.set PSR, 			0x53F84008
-
-	.set MAIN,			0x77812000
-	.set IRQ_STACK, 	0x77826000
-	.set SVC_STACK,		0x77838000
-	.set SYS_STACK,		0x77840000 @AUMENTEI 1
-
-
     @ Zera o contador do sistema
     ldr r2, =SYSTEM_TIME
     mov r0, #0
@@ -46,23 +26,10 @@ RESET_HANDLER:
     ldr r0, =interrupt_vector
     mcr p15, 0, r0, c12, c0, 0
 
-    @ Incializando pilhas em seus modos ------------------------------
-    @ Ajustando a pilha do modo IRQ.
-    msr  CPSR_c, #0xD2
-    LDR sp, =IRQ_STACK
-
-    @ Ajustando a pilha do modo SYSTEM
-    msr CPSR_c, #0x1F
-    LDR sp, =SYS_STACK
-
-    @ Ajustando a pilha do modo SVC
-    msr  CPSR_c, #0x13
-    LDR sp, =SVC_STACK
-
     @ Configurando o GPT ----------------------------------
     @ Habilita clock_src e o configura como periférico escrevendo em GPT_CR 0x41
     LDR r2, =GPT_CR
-    MOV r1, #0x41
+    MOV r1, #0x00000041
     STR r1, [r2]
 
     @ Zera GPT_PR
@@ -89,100 +56,70 @@ RESET_HANDLER:
 
     @ Zera as entradas e saidas dos pinos
     LDR r2, =DR
-    MOV r1, #0x0
+    MOV r1, #0
     STR r1, [r2]
 
+  SET_TZIC:
+      @ Constantes para os enderecos do TZIC
+      .set TZIC_BASE,             0x0FFFC000
+      .set TZIC_INTCTRL,          0x0
+      .set TZIC_INTSEC1,          0x84
+      .set TZIC_ENSET1,           0x104
+      .set TZIC_PRIOMASK,         0xC
+      .set TZIC_PRIORITY9,        0x424
 
-	SET_TZIC:
-	    @ Constantes para os enderecos do TZIC
-	    .set TZIC_BASE,             0x0FFFC000
-	    .set TZIC_INTCTRL,          0x0
-	    .set TZIC_INTSEC1,          0x84
-	    .set TZIC_ENSET1,           0x104
-	    .set TZIC_PRIOMASK,         0xC
-	    .set TZIC_PRIORITY9,        0x424
+      @ Liga o controlador de interrupcoes
+      @ R1 <= TZIC_BASE
 
-	    @ Liga o controlador de interrupcoes
-	    @ R1 <= TZIC_BASE
+      ldr	r1, =TZIC_BASE
 
-	    ldr	r1, =TZIC_BASE
+      @ Configura interrupcao 39 do GPT como nao segura
+      mov	r0, #(1 << 7)
+      str	r0, [r1, #TZIC_INTSEC1]
 
-	    @ Configura interrupcao 39 do GPT como nao segura
-	    mov	r0, #(1 << 7)
-	    str	r0, [r1, #TZIC_INTSEC1]
+      @ Habilita interrupcao 39 (GPT)
+      @ reg1 bit 7 (gpt)
 
-	    @ Habilita interrupcao 39 (GPT)
-	    @ reg1 bit 7 (gpt)
+      mov	r0, #(1 << 7)
+      str	r0, [r1, #TZIC_ENSET1]
 
-	    mov	r0, #(1 << 7)
-	    str	r0, [r1, #TZIC_ENSET1]
+      @ Configure interrupt39 priority as 1
+      @ reg9, byte 3
 
-	    @ Configure interrupt39 priority as 1
-	    @ reg9, byte 3
+      ldr r0, [r1, #TZIC_PRIORITY9]
+      bic r0, r0, #0xFF000000
+      mov r2, #1
+      orr r0, r0, r2, lsl #24
+      str r0, [r1, #TZIC_PRIORITY9]
 
-	    ldr r0, [r1, #TZIC_PRIORITY9]
-	    bic r0, r0, #0xFF000000
-	    mov r2, #1
-	    orr r0, r0, r2, lsl #24
-	    str r0, [r1, #TZIC_PRIORITY9]
+      @ Configure PRIOMASK as 0
+      eor r0, r0, r0
+      str r0, [r1, #TZIC_PRIOMASK]
 
-	    @ Configure PRIOMASK as 0
-	    eor r0, r0, r0
-	    str r0, [r1, #TZIC_PRIOMASK]
+      @ Habilita o controlador de interrupcoes
+      mov	r0, #1
+      str	r0, [r1, #TZIC_INTCTRL]
 
-	    @ Habilita o controlador de interrupcoes
-	    mov	r0, #1
-	    str	r0, [r1, #TZIC_INTCTRL]
+      @instrucao msr - habilita interrupcoes
+      msr CPSR_c, #0x13       @ SUPERVISOR mode, IRQ/FIQ enabled
 
-	    @instrucao msr - habilita interrupcoes
-	    msr  CPSR_c, #0x13       @ SUPERVISOR mode, IRQ/FIQ enabled
+    @ Incializando pilhas em seus modos ------------------------------
+    @ Ajustando a pilha do modo IRQ.
+    msr CPSR_c, #0x12
+    LDR sp, =IRQ_STACK
 
+    @ Ajustando a pilha do modo SYSTEM
+    msr CPSR_c, #0x1F
+    LDR sp, =SYS_STACK
+
+    @ Ajustando a pilha do modo SVC
+    msr CPSR_c, #0x13
+    LDR sp, =SVC_STACK
 
     @ Inicia o modo usuario--------------------------------------
     msr CPSR_c, #0x10
     LDR r0, =MAIN
     MOV pc, r0
-
-@-------------------------------------------------------------------------------
-IRQ_HANDLER:
-	stmfd sp!, {r0-r7, lr}
-
-	@ Salvando modo anterior do sistema
-	MRS r0, SPSR
-	stmfd sp!, {r0}
-
-	msr CPSR_c, #0xD2
-
-	@ Informa que a interrupcao foi capturada
-    LDR r2, =GPT_SR
-    MOV r1, #1
-    STR r1, [r2]
-
-    @ Incrementa o contador
-    ldr r2, =SYSTEM_TIME
-    LDR r0, [r2]
-    ADD r0, r0, #1
-    STR r0, [r2]
-
-    @ Entrando em modo usuario
-    msr CPSR_c, #0x10
-
-    @ Chama syscall para mudar para modo SUPERVISOR
-    MOV r7, #50
-    svc 0x0
-
-    @ Muda para o IRQ mode para recuperar modo antigo
-    msr CPSR_c, #0xD2
-
-    @ Seta modo antigo do sistema
-    ldmfd sp!, {r0}
-    msr SPSR, r0
-
-    @Retorno tem que subtrair 4 de lr
-	ldmfd sp!, {r0-r7, lr}
-    SUB lr, lr, #4
-	movs pc, lr
-
 
 SVC_HANDLER:
 	stmfd sp!, {r4, lr}
@@ -192,14 +129,15 @@ SVC_HANDLER:
 	stmfd sp!, {r4}
 
 	@ Comparacoes para determinar qual o tipo de syscall
-	CMP r7, #21
-	BLEQ READ_SONAR
-	CMP r7, #20
-	BLEQ SET_MOTOR_SPEED
+
 	CMP r7, #17
 	BLEQ GET_TIME
 	CMP r7, #18
 	BLEQ SET_TIME
+	CMP r7, #20
+	BLEQ SET_MOTOR_SPEED
+  CMP r7, #21
+	BLEQ READ_SONAR
 
 	@ Syscall utilizada para mudar para SUPERVISOR
 	CMP r7, #50
@@ -219,13 +157,45 @@ SVC_HANDLER:
 	ldmfd sp!, {r4, lr}
 	movs pc, lr
 
+  @-------------------------------------------------------------------------------
+  IRQ_HANDLER:
+  	stmfd sp!, {r0-r7, lr}
 
-@ Funcoes do uoli -----------------------------------------------------
-.set SPEED_msk, 	0b111111
-.set SPEED_DR_msk, 	0b1111111
-.set SONAR_msk,		0b1111
-.set SONARDIS_msk, 	0b111111111111
+  	@ Salvando modo anterior do sistema
+  	MRS r0, SPSR
+  	stmfd sp!, {r0}
 
+  	msr CPSR_c, #0x12
+
+  	@ Informa que a interrupcao foi capturada
+      LDR r2, =GPT_SR
+      MOV r1, #1
+      STR r1, [r2]
+
+      @ Incrementa o contador
+      ldr r2, =SYSTEM_TIME
+      LDR r0, [r2]
+      ADD r0, r0, #1
+      STR r0, [r2]
+
+      @ Entrando em modo usuario
+      msr CPSR_c, #0x10
+
+      @ Chama syscall para mudar para modo SUPERVISOR
+      MOV r7, #50
+      svc 0x0
+
+      @ Muda para o IRQ mode para recuperar modo antigo
+      msr CPSR_c, #0x12
+
+      @ Seta modo antigo do sistema
+      ldmfd sp!, {r0}
+      msr SPSR, r0
+
+      @Retorno tem que subtrair 4 de lr
+  	ldmfd sp!, {r0-r7, lr}
+      SUB lr, lr, #4
+  	movs pc, lr
 
 @ Escreve nos pinos do motor escolhido uma velocidade
 @ Parametros:
@@ -237,7 +207,7 @@ SVC_HANDLER:
 SET_MOTOR_SPEED:
 	stmfd sp!, {r4, lr}
 
-  msr  CPSR_c, #0x1F
+  msr CPSR_c, #0x1F
 	@ Verificando se os parametros sao validos
 	CMP r0, #1
 	MOVHI r0, #-1	@ ID invalido
@@ -256,8 +226,8 @@ SET_MOTOR_SPEED:
 
 	@ Verifica qual motor esta sendo utilizado
 	CMP r0, #0
-	MOVEQ r3, #25
-	MOVNE r3, #18
+	MOVEQ r3, #18
+	MOVNE r3, #25
 
 	@ Mascara dos bits relativos ao motor
 	LDR r4, =SPEED_DR_msk
@@ -268,7 +238,7 @@ SET_MOTOR_SPEED:
 	@ Inserindo nova velocidade
 	ADD r3, r3, #1
 	ORR r2, r2, r1, LSL r3
-	MOV r4, #1
+	MOV r4, #0x1
 	SUB r3, r3, #1
 	BIC r2, r2, r4, LSL r3	@ Flag MOTOR_WRITE <= 0
 
@@ -279,7 +249,7 @@ SET_MOTOR_SPEED:
 
 	SET_MOTOR_SPEED_END:
 		@ Retorna para a SVC_HANDLER
-    msr  CPSR_c, #0x13
+    msr CPSR_c, #0x13
 		ldmfd sp!, {r4, pc}
 
 @ Le um sonar especifico
@@ -290,9 +260,9 @@ SET_MOTOR_SPEED:
 
 READ_SONAR:
 	stmfd sp!, {r4, lr}
-  msr  CPSR_c, #0x1F
+  msr CPSR_c, #0x1F
 	@ Verificando se os parametros sao validos
-	CMP r0, #0xF
+	CMP r0, #15
 	MOVHI r0, #-1	@ Erro no id do sonar
 	BHI READ_SONAR_END
 
@@ -373,11 +343,12 @@ READ_SONAR:
 	@ Extraindo o valor retornado do sonar
 	LDR r2, =SONARDIS_msk
 	AND r3, r3, r2, LSL #6
-	MOV r0, r3, LSR #6
+	MOV r3, r3, LSR #6
+  MOV r0, r3
 
 	READ_SONAR_END:
 		@ Retorna para a SVC_HANDLER
-    msr  CPSR_c, #0x13
+    msr CPSR_c, #0x13
 		ldmfd sp!, {r4, pc}
 
 @ Retorna o tempo do sistema
@@ -409,3 +380,28 @@ SET_TIME:
 .data
 .org 0x0
 	SYSTEM_TIME: .word 0
+
+  @ Valores e enderecos do GPT
+	.set GPT_CR, 		0x53FA0000
+	.set GPT_PR, 		0x53FA0004
+	.set GPT_OCR1, 		0x53FA0010
+	.set GPT_IR, 		0x53FA000C
+	.set GPT_SR, 		0x53FA0008
+	.set TIME_SZ,		200
+
+	@ Valores e enderecos do GPIO
+	.set DR,			0x53F84000
+	.set GDIR, 			0x53F84004
+	.set GDIR_msk,		0xFFFC003E
+	.set PSR, 			0x53F84008
+
+	.set MAIN,			0x77812000
+	.set IRQ_STACK, 	0x77836000
+	.set SVC_STACK,		0x77848000
+	.set SYS_STACK,		0x77850000 @AUMENTEI 2
+
+  @ Funcoes do uoli -----------------------------------------------------
+  .set SPEED_msk, 	0b111111
+  .set SPEED_DR_msk, 	0b1111111
+  .set SONAR_msk,		0b1111
+  .set SONARDIS_msk, 	0b111111111111

@@ -21,12 +21,12 @@ void busca_parede(int* distancias) {
 
   motor_cfg_t motor0;
   motor0.id = 0;
-  motor0.speed = 10;
+  motor0.speed = 20;
   set_motor_speed(&motor0);
 
   motor_cfg_t motor1;
   motor1.id = 1;
-  motor1.speed = 10;
+  motor1.speed = 20;
   set_motor_speed(&motor1);
 
 	distancias[3] = read_sonar(3);
@@ -35,23 +35,23 @@ void busca_parede(int* distancias) {
     distancias[3] = read_sonar(3);
     distancias[4] = read_sonar(4);
   }
-  motor0.speed = 50;
-  motor1.speed=50;
+  motor0.speed = 0;
+  motor1.speed=0;
   set_motor_speed(&motor0);
   set_motor_speed(&motor1);
   distancias[3] = read_sonar(3);
   distancias[4] = read_sonar(4);
-  for(i = 0; i < 50;i++){
-      distancias[3] = read_sonar(3);
-      distancias[4] = read_sonar(4);
-  };
-
-  motor0.speed = 25;
-  motor1.speed = 25;
-  set_motor_speed(&motor0);
-  set_motor_speed(&motor1);
-  distancias[3] = read_sonar(3);
-  distancias[4] = read_sonar(4);
+  // for(i = 0; i < 50;i++){
+  //     distancias[3] = read_sonar(3);
+  //     distancias[4] = read_sonar(4);
+  // };
+  //
+  // motor0.speed = 25;
+  // motor1.speed = 25;
+  // set_motor_speed(&motor0);
+  // set_motor_speed(&motor1);
+  // distancias[3] = read_sonar(3);
+  // distancias[4] = read_sonar(4);
 }
 //
 // void segue_parede(unsigned int* distancias) {
