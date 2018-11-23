@@ -20,27 +20,32 @@ void _start(void)
 void ronda(int* distancias) {
   motor_cfg_t motor0;
   motor0.id = 0;
-  motor0.speed = 10;
+  motor0.speed = 20;
 
   motor_cfg_t motor1;
   motor1.id = 1;
-  motor1.speed = 10;
+  motor1.speed = 20;
 
   set_motor_speed(&motor0);
   set_motor_speed(&motor1);
 
   set_time(0);
   get_time(&timeSystem);
-  while (timeSystem < 800) {
+  while (timeSystem < 1000) {
     get_time(&timeSystem);
     distancias[3]=read_sonar(3);
     distancias[4]=read_sonar(4);
-    if(distancias[3]<=600){
-			virar2();
+    if(distancias[3]<=1000){
+			virar2();  
+			set_motor_speed(&motor0);
+			set_motor_speed(&motor1);
+		}else if(distancias[4]<=1100){
+			virar1();			
+		  set_motor_speed(&motor0);
+			set_motor_speed(&motor1);
 		}
-		if(distancias[4]<=600){
-			virar2();
-		}
+		
+		get_time(&timeSystem);
   }
   
   virar1();
@@ -51,38 +56,40 @@ void virar1() {
   motor_cfg_t motor0;
   motor_cfg_t motor1;
 
-  motor0.id = 1;
-  motor0.speed = 30;
+  motor0.id = 0;
+  motor0.speed = 0;
 
-  motor1.id = 0;
-  motor1.speed = 0;
+  motor1.id = 1;
+  motor1.speed = 25;
 
   set_motor_speed(&motor0);
   set_motor_speed(&motor1);
 
   set_time(0);
   get_time(&timeSystem);
-  while (timeSystem < 120) {
+  while (timeSystem < 100) {
     get_time(&timeSystem);
   }
+  set_time(0);
 }
 
 void virar2() {
   motor_cfg_t motor0;
   motor_cfg_t motor1;
 
-  motor0.id = 1;
-  motor0.speed = 5;
+  motor0.id = 0;
+  motor0.speed = 0;
 
-  motor1.id = 0;
-  motor1.speed = 0;
+  motor1.id = 1;
+  motor1.speed = 25;
 
   set_motor_speed(&motor0);
   set_motor_speed(&motor1);
 
   set_time(0);
   get_time(&timeSystem);
-  while (timeSystem < 1) {
+  while (timeSystem < 70) {
     get_time(&timeSystem);
   }
+  set_time(0);
 }
