@@ -1,19 +1,20 @@
 #include "api_robot2.h"
 
 void ronda(unsigned int* distancias);
-void virar1(unsigned int* distancias);
-void virar2();
 
 int qtdTempo = 0;
+int timeSystem;
+
 
 void _start(void)
 {
 	int distancias[16];
   ronda(distancias);
+  while (1)
+    ronda(distancias);
 }
 
 void ronda(unsigned int* distancias) {
-  int i;
   motor_cfg_t motor0;
   motor0.id = 0;
   motor0.speed = 15;
@@ -24,67 +25,34 @@ void ronda(unsigned int* distancias) {
 
   set_motor_speed(&motor0);
   set_motor_speed(&motor1);
-	distancias[3]=read_sonar(3);
-	while(distancias[3]>=300){
-		distancias[3]=read_sonar(3);
-		//if(distancias[3]<300){
-			//qtdTempo = 0;
-			//virar1(distancias);
-		//}
-		//if (qtdTempo == 50){
-		//	qtdTempo = 0;
-		//	virar1(distancias);
 
-		//}else{
-		//	qtdTempo++;
-		//}
-	}
-	// motor0.speed=0;
-	// set_motor_speed(&motor0);
-	// motor1.speed=0;
-	// set_motor_speed(&motor1);
-	// for(i=0;i<300;i++){
-	// distancias[3]=read_sonar(3);
-	// }
-
-}
-
-void virar1(unsigned int* distancias) {
-  motor_cfg_t motor0;
-  int i;
-  motor0.id = 0;
-  motor0.speed = 25;
-
-  motor_cfg_t motor1;
-  motor1.id = 1;
-  motor1.speed =0;
-  set_motor_speed(&motor0);
-  set_motor_speed(&motor1);
-
-  while(distancias[3]<300){
-	distancias[3]=read_sonar(3);
+  set_time(0);
+  get_time(&timeSystem);
+  while (timeSystem < 3000) {
+    get_time(&timeSystem);
   }
-  distancias[3]=read_sonar(3);
-  return;
+  
+
+  virar1();
 
 }
 
-void virar2() {
+void virar1() {
   motor_cfg_t motor0;
-  int i;
-  motor0.id = 0;
-  motor0.speed = 25;
-
   motor_cfg_t motor1;
-  motor1.id = 1;
-  motor1.speed =0;
+
+  motor0.id = 1;
+  motor0.speed = 30;
+
+  motor1.id = 0;
+  motor1.speed = 0;
+
   set_motor_speed(&motor0);
   set_motor_speed(&motor1);
 
-  for(i = 0; i < 9000;i++);
-
-  motor0.speed = 25;
-  motor0.speed = 25;
-  set_motor_speed(&motor0);
-  set_motor_speed(&motor1);
+  set_time(0);
+  get_time(&timeSystem);
+  while (timeSystem < 500) {
+    get_time(&timeSystem);
+  }
 }
