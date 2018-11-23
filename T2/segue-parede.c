@@ -1,11 +1,11 @@
 #include "api_robot2.h"
 
 void busca_parede(int* distancias);
-// void segue_parede(unsigned int* distancias);
-// void corrigir1();
-// void corrigir2();
-// void virar1();
-// void virar2();
+void segue_parede(int* distancias, int sonar);
+void corrigir1();
+void corrigir2();
+void virar1();
+void virar2();
 
 
 void _start(void){
@@ -17,139 +17,81 @@ void _start(void){
 }
 
 void busca_parede(int* distancias) {
-  int i, j;
+  int i, parede=0, sonar=-1;
 
   motor_cfg_t motor0;
   motor0.id = 0;
-  motor0.speed = 20;
+  motor0.speed = 8;
   set_motor_speed(&motor0);
 
   motor_cfg_t motor1;
   motor1.id = 1;
-  motor1.speed = 10;
+  motor1.speed = 8;
   set_motor_speed(&motor1);
-
-
-  i = read_sonar(3);
-  j = read_sonar(4);
-
-  if (i < 1200) {
-    motor0.speed = 0;
-    set_motor_speed(&motor0);
-    motor1.speed = 0;
-    set_motor_speed(&motor1);
+	for(i=0;i<7;i++){
+		distancias[i] = read_sonar(i);
+	}
+  
+  while (parede==0) {
+			distancias[0] = read_sonar(0);
+			distancias[3] = read_sonar(3);
+			distancias[4] = read_sonar(4);
+			distancias[7] = read_sonar(7);
+			if(distancias[3]<=800){
+				virar1();
+				motor1.speed = 8;
+				set_motor_speed(&motor1);
+			}
+			if(distancias[4]<=800){
+				virar2();			
+				motor0.speed = 8;
+				set_motor_speed(&motor0);
+			}
+			if(distancias[0]<=800){
+				segue_parede(distancias,0);
+			}
+			if(distancias[7]<=800){
+				segue_parede(distancias,7);
+			}
+		}
   }
- //  while (distancias[3] > 100) {
- //    distancias[3] = read_sonar(3);
- //    distancias[4] = read_sonar(4);
- //  }
- //  motor0.speed = 0;
- //  motor1.speed=0;
- //  set_motor_speed(&motor0);
- //  set_motor_speed(&motor1);
- //  distancias[3] = read_sonar(3);
- //  distancias[4] = read_sonar(4);
-  // for(i = 0; i < 50;i++){
-  //     distancias[3] = read_sonar(3);
-  //     distancias[4] = read_sonar(4);
-  // };
-  //
-  // motor0.speed = 25;
-  // motor1.speed = 25;
-  // set_motor_speed(&motor0);
-  // set_motor_speed(&motor1);
-  // distancias[3] = read_sonar(3);
-  // distancias[4] = read_sonar(4);
-}
-//
-// void segue_parede(unsigned int* distancias) {
-//
-//   register_proximity_callback(0, 500, corrigir1);
-//   register_proximity_callback(15, 500, corrigir2);
-//
-//   register_proximity_callback(3, 600, virar1);
-//   register_proximity_callback(4, 600, virar2);
-//   while(1);
-// }
 
-// void corrigir1() {
-//   motor_cfg_t motor0;
-//   int i;
-//   motor0.id = 0;
-//   motor0.speed = 25;
-//
-//   motor_cfg_t motor1;
-//   motor1.id = 1;
-//   motor1.speed =10;
-//
-//   set_motor_speed(&motor0);
-//   set_motor_speed(&motor1);
-//
-//   for(i = 0; i < 5000;i++);
-//
-//   motor0.speed = 25;
-//   motor0.speed = 25;
-//   set_motor_speed(&motor0);
-//   set_motor_speed(&motor1);
-// }
-//
-// void corrigir2() {
-//   motor_cfg_t motor0;
-//   int i;
-//   motor0.id = 0;
-//   motor0.speed = 25;
-//
-//   motor_cfg_t motor1;
-//   motor1.id = 1;
-//   motor1.speed =10;
-//
-//   set_motor_speed(&motor0);
-//   set_motor_speed(&motor1);
-//
-//   for(i = 0; i < 5000;i++);
-//
-//   motor0.speed = 25;
-//   motor0.speed = 25;
-//   set_motor_speed(&motor0);
-//   set_motor_speed(&motor1);
-// }
-//
-// void virar1() {
-//   motor_cfg_t motor0;
-//   int i;
-//   motor0.id = 0;
-//   motor0.speed = 25;
-//
-//   motor_cfg_t motor1;
-//   motor1.id = 1;
-//   motor1.speed =0;
-//   set_motor_speed(&motor0);
-//   set_motor_speed(&motor1);
-//
-//   for(i = 0; i < 9000;i++);
-//
-//   motor0.speed = 25;
-//   motor0.speed = 25;
-//   set_motor_speed(&motor0);
-//   set_motor_speed(&motor1);
-// }
-//
-// void virar2() {
-//   motor_cfg_t motor0;
-//   int i;
-//   motor0.id = 0;
-//   motor0.speed = 25;
-//
-//   motor_cfg_t motor1;
-//   motor1.id = 1;
-//   motor1.speed =0;
-//   set_motor_speed(&motor0);
-//   set_motor_speed(&motor1);
-//
-//   for(i = 0; i < 9000;i++);
-//
-//   motor0.speed = 25;
-//   motor0.speed = 25;
-//   set_motor_speed(&motor0);
-//   set_motor_speed(&motor1);
-// }
+void segue_parede(int* distancias, int sonar) {
+	int i;
+	motor_cfg_t motor1;
+  motor1.id = 1;
+  motor1.speed = 0;
+  set_motor_speed(&motor1);
+  
+	motor_cfg_t motor0;
+  motor0.id = 0;
+  motor0.speed = 0;
+  set_motor_speed(&motor0);
+  for(i=0;i<1000000000;i++){
+	}
+	for(i=0;i<1000000000;i++){
+	}
+}
+
+void corrigir1() {}
+
+void corrigir2() {}
+
+void virar1() {
+	int i;
+	motor_cfg_t motor1;
+  motor1.id = 0;
+  motor1.speed = 0;
+  set_motor_speed(&motor1);
+  for(i=0;i<1000000000;i++){
+	}
+}
+void virar2() {
+	int i;
+	motor_cfg_t motor0;
+  motor0.id = 1;
+  motor0.speed = 0;
+  set_motor_speed(&motor0);
+  for(i=0;i<1000000000;i++){
+	}
+}

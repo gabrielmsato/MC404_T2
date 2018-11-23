@@ -286,7 +286,7 @@ READ_SONAR:
 	STR r2, [r1]
 
 	@ Delay para executar as operacoes
-	MOV r4, #4096
+	MOV r4, #2048
 
 	DELAY_SONAR_LOOP1:
 		CMP r4, #0
@@ -301,7 +301,7 @@ READ_SONAR:
 	STR r2, [r1]	@ Seta os pinos do registrador DR
 
 	@ Delay para executar as operacoes
-	MOV r4, #4096
+	MOV r4, #2048
 
 	DELAY_SONAR_LOOP2:
 		CMP r4, #0
@@ -324,7 +324,7 @@ READ_SONAR:
 		BEQ FLAG_LOOP_END
 
 		@ Delay para executar as operacoes
-		MOV r4, #4096
+		MOV r4, #2048
 
 		 DELAY_SONAR_LOOP3:
 		  	CMP r4, #0
@@ -387,7 +387,7 @@ SET_TIME:
 	.set GPT_OCR1, 		0x53FA0010
 	.set GPT_IR, 		0x53FA000C
 	.set GPT_SR, 		0x53FA0008
-	.set TIME_SZ,		200
+	.set TIME_SZ,		50
 
 	@ Valores e enderecos do GPIO
 	.set DR,			0x53F84000
