@@ -125,8 +125,8 @@ SVC_HANDLER:
 	stmfd sp!, {r4, lr}
 
 	@ Salva o modo antigo do programa em r4
-	MRS r4, SPSR
-	stmfd sp!, {r4}
+	@MRS r4, SPSR
+	@stmfd sp!, {r4}
 
 	@ Comparacoes para determinar qual o tipo de syscall
 
@@ -136,23 +136,23 @@ SVC_HANDLER:
 	BLEQ SET_TIME
 	CMP r7, #20
 	BLEQ SET_MOTOR_SPEED
-  CMP r7, #21
+  	CMP r7, #21
 	BLEQ READ_SONAR
 
 	@ Syscall utilizada para mudar para SUPERVISOR
-	CMP r7, #50
-	BNE SVC_HANDLER_END
+	@CMP r7, #50
+	@BNE SVC_HANDLER_END
 
 	@ Desempilhando modo antigo, pois queremos o modo SUPERVISOR
-	ADD sp, sp, #4
+	@ADD sp, sp, #4
 
 	@ Retorna para a funcao que chamou em modo SUPERVISOR
-	ldmfd sp!, {pc}
+	@ldmfd sp!, {pc}
 
-	SVC_HANDLER_END:
+	@SVC_HANDLER_END:
 	@ Retorna ao modo antigo do programa
-	ldmfd sp!, {r4}
-	MSR SPSR, r4
+	@ldmfd sp!, {r4}
+	@MSR SPSR, r4
 
 	ldmfd sp!, {r4, lr}
 	movs pc, lr
@@ -162,40 +162,40 @@ SVC_HANDLER:
   	stmfd sp!, {r0-r7, lr}
 
   	@ Salvando modo anterior do sistema
-  	MRS r0, SPSR
-  	stmfd sp!, {r0}
+  	@MRS r0, SPSR
+  	@stmfd sp!, {r0}
 
-  	msr CPSR_c, #0x12
+  	@msr CPSR_c, #0x12
 
   	@ Informa que a interrupcao foi capturada
-      LDR r2, =GPT_SR
-      MOV r1, #1
-      STR r1, [r2]
+	LDR r2, =GPT_SR
+	MOV r1, #1
+	STR r1, [r2]
 
-      @ Incrementa o contador
-      ldr r2, =SYSTEM_TIME
-      LDR r0, [r2]
-      ADD r0, r0, #1
-      STR r0, [r2]
+	@ Incrementa o contador
+	ldr r2, =SYSTEM_TIME
+	LDR r0, [r2]
+	ADD r0, r0, #1
+	STR r0, [r2]
 
-      @ Entrando em modo usuario
-      msr CPSR_c, #0x10
+	@ Entrando em modo usuario
+	@msr CPSR_c, #0x10
 
-      @ Chama syscall para mudar para modo SUPERVISOR
-      MOV r7, #50
-      svc 0x0
+	@ Chama syscall para mudar para modo SUPERVISOR
+	@MOV r7, #50
+	@svc 0x0
 
-      @ Muda para o IRQ mode para recuperar modo antigo
-      msr CPSR_c, #0x12
+	@ Muda para o IRQ mode para recuperar modo antigo
+	@msr CPSR_c, #0x12
 
-      @ Seta modo antigo do sistema
-      ldmfd sp!, {r0}
-      msr SPSR, r0
+	@ Seta modo antigo do sistema
+	@ ldmfd sp!, {r0}
+	@msr SPSR, r0
 
-      @Retorno tem que subtrair 4 de lr
-  	ldmfd sp!, {r0-r7, lr}
-      SUB lr, lr, #4
-  	movs pc, lr
+	@Retorno tem que subtrair 4 de lr
+	ldmfd sp!, {r0-r7, lr}
+	SUB lr, lr, #4
+	movs pc, lr
 
 @ Escreve nos pinos do motor escolhido uma velocidade
 @ Parametros:
@@ -207,7 +207,7 @@ SVC_HANDLER:
 SET_MOTOR_SPEED:
 	stmfd sp!, {r4, lr}
 
-  msr CPSR_c, #0x1F
+  	@msr CPSR_c, #0x1F
 	@ Verificando se os parametros sao validos
 	CMP r0, #1
 	MOVHI r0, #-1	@ ID invalido
@@ -249,8 +249,8 @@ SET_MOTOR_SPEED:
 
 	SET_MOTOR_SPEED_END:
 		@ Retorna para a SVC_HANDLER
-    msr CPSR_c, #0x13
-		ldmfd sp!, {r4, pc}
+	@msr CPSR_c, #0x13
+	ldmfd sp!, {r4, pc}
 
 @ Le um sonar especifico
 @ Parametros:
@@ -260,7 +260,7 @@ SET_MOTOR_SPEED:
 
 READ_SONAR:
 	stmfd sp!, {r4, lr}
-  msr CPSR_c, #0x1F
+  	@msr CPSR_c, #0x1F
 	@ Verificando se os parametros sao validos
 	CMP r0, #15
 	MOVHI r0, #-1	@ Erro no id do sonar
@@ -292,7 +292,7 @@ READ_SONAR:
 		CMP r4, #0
 		BEQ DELAY_SONAR_END1
 		SUB r4, r4, #1
-	  B DELAY_SONAR_LOOP1
+	  	B DELAY_SONAR_LOOP1
 	DELAY_SONAR_END1:
 
 
@@ -307,7 +307,7 @@ READ_SONAR:
 		CMP r4, #0
 		BEQ DELAY_SONAR_END2
 		SUB r4, r4, #1
-	B DELAY_SONAR_LOOP2
+		B DELAY_SONAR_LOOP2
 	DELAY_SONAR_END2:
 
 	@ Flag TRIGGER <= 0
@@ -327,10 +327,10 @@ READ_SONAR:
 		MOV r4, #4096
 
 		 DELAY_SONAR_LOOP3:
-		  CMP r4, #0
-		  BEQ DELAY_SONAR_END3
-		  SUB r4, r4, #1
-	   B DELAY_SONAR_LOOP3
+		  	CMP r4, #0
+		  	BEQ DELAY_SONAR_END3
+		  	SUB r4, r4, #1
+	   		B DELAY_SONAR_LOOP3
 		DELAY_SONAR_END3:
 
 	B FLAG_LOOP
@@ -344,11 +344,11 @@ READ_SONAR:
 	LDR r2, =SONARDIS_msk
 	AND r3, r3, r2, LSL #6
 	MOV r3, r3, LSR #6
-  MOV r0, r3
+  	MOV r0, r3
 
 	READ_SONAR_END:
 		@ Retorna para a SVC_HANDLER
-    msr CPSR_c, #0x13
+    	@msr CPSR_c, #0x13
 		ldmfd sp!, {r4, pc}
 
 @ Retorna o tempo do sistema
@@ -370,11 +370,11 @@ GET_TIME:
 
 SET_TIME:
 	stmfd sp!, {lr}
-  msr  CPSR_c, #0x1F
+  	@msr  CPSR_c, #0x1F
 	@ Seta o tempo passado como parametro em SYSTEM_TIME
 	LDR r1, =SYSTEM_TIME
 	STR r0, [r1]
-  msr  CPSR_c, #0x13
+  	@msr  CPSR_c, #0x13
 	ldmfd sp!, {pc}
 
 .data
