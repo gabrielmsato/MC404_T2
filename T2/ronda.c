@@ -25,9 +25,8 @@ void ronda(int* distancias) {
   motor_cfg_t motor1;
   motor1.id = 1;
   motor1.speed = 20;
-
-  set_motor_speed(&motor0);
   set_motor_speed(&motor1);
+  set_motor_speed(&motor0);
 
   set_time(0);
   get_time(&timeSystem);
