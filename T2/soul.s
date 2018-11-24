@@ -387,7 +387,7 @@ SET_TIME:
 	.set GPT_OCR1, 		0x53FA0010
 	.set GPT_IR, 		0x53FA000C
 	.set GPT_SR, 		0x53FA0008
-	.set TIME_SZ,		200
+	.set TIME_SZ,		400
 
 	@ Valores e enderecos do GPIO
 	.set DR,			0x53F84000
