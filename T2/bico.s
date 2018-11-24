@@ -39,19 +39,13 @@ set_motor_speed:
 @ Codigo 17
 @ void get_time(unsigned int* t);
 get_time:
-	stmfd sp!, {r4, r7, lr}
-
-	@ Salvando o endereco do retorno em r4
-	MOV r4, r0
+	stmfd sp!, {r7, lr}
 
 	@ Fazendo a syscall
 	MOV r7, #17
 	SVC 0x0
 
-	@ Salvando no endereco do ponteiro o retorno
-	STR r0, [r4]
-
-	ldmfd sp!, {r4, r7, pc}
+	ldmfd sp!, {r7, pc}
 
 
 @ Codigo 18

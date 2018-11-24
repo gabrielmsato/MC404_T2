@@ -11,7 +11,6 @@ int timeSystem=0;
 void _start(void)
 {
 	int distancias[16];
-  //ronda(distancias);
   while (1){
     ronda(distancias);
 	}
@@ -32,7 +31,7 @@ void ronda(int* distancias) {
   get_time(&timeSystem);
   for(n=1;n<=50;n++){
 		while (timeSystem < n) {
-			get_time(&timeSystem);
+			timeSystem=get_time();
 			distancias[3]=read_sonar(3);
 			distancias[4]=read_sonar(4);
 			if(distancias[3]<=1200){
@@ -45,7 +44,7 @@ void ronda(int* distancias) {
 				set_motor_speed(&motor1);
 			}
 		
-		get_time(&timeSystem);
+		timeSystem=get_time();
   }
 		virar2();
 		set_motor_speed(&motor0);
@@ -67,9 +66,9 @@ void virar1() {
   set_motor_speed(&motor1);
 
   set_time(0);
-  get_time(&timeSystem);
-  while (timeSystem < 100) {
-    get_time(&timeSystem);
+  timeSystem=get_time();
+  while (timeSystem < 20) {
+    timeSystem=get_time();
   }
   set_time(0);
 }
@@ -88,9 +87,9 @@ void virar2() {
   set_motor_speed(&motor1);
 
   set_time(0);
-  get_time(&timeSystem);
-  while (timeSystem < 200) {
-    get_time(&timeSystem);
+  timeSystem=get_time();
+  while (timeSystem < 50) {
+    timeSystem=get_time();
   }
   set_time(0);
 }
